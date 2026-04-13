@@ -1,0 +1,94 @@
+{
+  "tools": [
+    {
+      "id": "kafeju.analyze_vm_usage_patterns",
+      "name": "Analyze VM Usage Patterns",
+      "description": "Analyzes GCP VM resource usage patterns, identifies drift between requested and actual usage, and highlights over-provisioned instances. Returns CPU/memory usage, drift metrics, and efficiency scores.",
+      "esql_query": "FROM gcp-resource-executions-*\n| STATS avg_cpu_used = AVG(resource_usage.cpu.avg_percent), avg_mem_used = AVG(resource_usage.memory.avg_percent), p95_cpu = AVG(resource_usage.cpu.p95_percent), avg_cpu_drift = AVG(drift_metrics.cpu.drift_percent), avg_mem_drift = AVG(drift_metrics.memory.drift_percent), combined_drift = AVG(drift_metrics.combined_drift_score), exec_count = COUNT(*) BY metadata.team.keyword, vm_info.vm_type_actual.keyword, vm_info.zone.keyword\n| SORT combined_drift DESC"
+    },
+    {
+      "id": "kafeju.calculate_cost_optimization_1",
+      "name": "Calculate Cost Optimization",
+      "description": "Calculates potential cost savings from VM rightsizing by analyzing usage patterns. Identifies instances with high drift (>20%) and recommends optimal sizing based on P95 usage with 20% headroom.",
+      "esql_query": "FROM gcp-resource-executions-*\n| WHERE drift_metrics.combined_drift_score > 20\n| STATS avg_cpu_drift = AVG(drift_metrics.cpu.drift_percent), avg_mem_drift = AVG(drift_metrics.memory.drift_percent), p95_cpu = AVG(resource_usage.cpu.p95_percent), p95_mem = AVG(resource_usage.memory.p95_percent), total_cost = SUM(cost_actual.total_cost_usd), exec_count = COUNT(*) BY metadata.team.keyword, vm_info.vm_type_actual.keyword\n| SORT total_cost DESC"
+    },
+    {
+      "id": "kafeju.calculate_cost_per_instance_run",
+      "name": "Calculate Cost Per Instance Run",
+      "description": "Calculates cost per instance run by combining uptime data with pricing. Shows which instances cost the most and their efficiency (high CPU usage = efficient, low = wasteful). Ideal for analyzing short-lived CI/CD instances.",
+      "esql_query": "FROM gcp-resource-executions-*\n| STATS avg_cost = AVG(cost_actual.total_cost_usd), avg_duration = AVG(execution_time.duration_minutes), avg_cpu = AVG(resource_usage.cpu.avg_percent), runs = COUNT(*) BY resource_name.keyword, vm_info.vm_type_actual.keyword, metadata.team.keyword\n| EVAL cost_per_run = avg_cost, efficiency = avg_cpu\n| SORT cost_per_run DESC"
+    },
+    {
+      "id": "kafeju.compare_instance_options",
+      "name": "Compare Instance Options",
+      "description": "Compares different GCP VM machine types for cost and performance trade offs. Filters by minimum CPU and memory requirements and calculates efficiency scores.",
+      "esql_query": "FROM gcp-vm-pricing\n| STATS avg_price_hour = AVG(pricing.price_per_hour_usd), avg_price_month = AVG(pricing.price_per_month_usd), cpu = MAX(pricing.cpu_cores), mem = MAX(pricing.memory_gb) BY machine_type.keyword\n| EVAL cost_per_core = avg_price_hour / cpu, cost_per_gb = avg_price_hour / mem\n| SORT cost_per_core ASC"
+    },
+    {
+      "id": "kafeju.compare_team_request_vs_usage",
+      "name": "Compare Team Request vs Usage",
+      "description": "Compares what teams have ALLOCATED (VM sizes) vs what they ACTUALLY USE (real metrics). Calculates efficiency scores to identify which teams are over-provisioning the most. Lower efficiency score = more waste.",
+      "esql_query": "FROM gcp-resource-executions-*\n| STATS avg_cpu_used = AVG(resource_usage.cpu.avg_percent), avg_mem_used = AVG(resource_usage.memory.avg_percent), avg_cpu_drift = AVG(drift_metrics.cpu.drift_percent), avg_mem_drift = AVG(drift_metrics.memory.drift_percent), total_cost = SUM(cost_actual.total_cost_usd), vm_count = COUNT(*) BY metadata.team.keyword\n| EVAL efficiency_score = (avg_cpu_used + avg_mem_used) / 2\n| SORT efficiency_score ASC"
+    },
+    {
+      "id": "kafeju.detect_resource_anomalies",
+      "name": "Detect Resource Anomalies",
+      "description": "Identifies VMs with unusual resource usage patterns detected by the ML job `vm-capacity-planning`. Queries real ML anomaly results from `.ml-anomalies-*` index. Automatically finds problems that deviate from learned baselines.",
+      "esql_query": "FROM ml-predictions-anomalies\n| WHERE record_score > 25\n| SORT record_score DESC\n| KEEP @timestamp, vm_id, vm_type, team, severity, record_score, actual, typical, function_description, partition_field_value"
+    },
+    {
+      "id": "kafeju.detect_team_anomalies",
+      "name": "Detect Team Anomalies",
+      "description": "Identifies workloads within teams that have unusual resource patterns. Classifies workloads as HEAVY_USER (>5 cores avg), LIGHT_USER (<1 core avg), or NORMAL. Results are sorted by team to make it easy to spot outliers within each team's context.",
+      "esql_query": "FROM gcp-resource-executions-*\n| STATS avg_cores = AVG(resource_usage.cpu.avg_cores_used), avg_mem_gb = AVG(resource_usage.memory.avg_gb_used), exec_count = COUNT(*) BY metadata.team.keyword, metadata.workload_type.keyword\n| EVAL classification = CASE(avg_cores > 5, \"HEAVY_USER\", avg_cores < 1, \"LIGHT_USER\", \"NORMAL\")\n| SORT metadata.team.keyword, avg_cores DESC"
+    },
+    {
+      "id": "kafeju.find_similar_workloads",
+      "name": "Find Similar Workloads",
+      "description": "Calculates potential cost savings from VM rightsizing by analyzing usage patterns. Identifies instances with high drift (>20%) and recommends optimal sizing based on P95 usage with 20% headroom.",
+      "esql_query": "FROM gcp-resource-executions-*\n| STATS avg_cpu = AVG(resource_usage.cpu.avg_percent), p95_cpu = AVG(resource_usage.cpu.p95_percent), avg_mem = AVG(resource_usage.memory.avg_percent), avg_duration = AVG(execution_time.duration_minutes), total_cost = SUM(cost_actual.total_cost_usd), runs = COUNT(*) BY metadata.workload_type.keyword, vm_info.vm_type_actual.keyword\n| SORT metadata.workload_type.keyword, total_cost DESC"
+    },
+    {
+      "id": "kafeju.get_cost_projection",
+      "name": "Get Cost Projection",
+      "description": "Calculates cost projections based on recent usage trends. Uses 7-day historical data to project 30-day costs with trend analysis. Not ML-based forecasting (which requires Elasticsearch Cloud, not Serverless).",
+      "esql_query": "FROM gcp-resource-executions-*\n| STATS daily_cost = SUM(cost_actual.total_cost_usd), daily_runs = COUNT(*) BY execution_date = DATE_TRUNC(1 day, execution_time.started_at)\n| SORT execution_date DESC\n| LIMIT 30"
+    },
+    {
+      "id": "kafeju.get_historical_workload_patterns",
+      "name": "Get Historical Workload Patterns",
+      "description": "Analyzes historical execution data for specific workload types to show actual resource consumption patterns, including average, peak, and P95 usage. Helps recommend instance sizes based on real-world data.",
+      "esql_query": "FROM gcp-resource-executions-*\n| STATS avg_cpu = AVG(resource_usage.cpu.avg_percent), peak_cpu = MAX(resource_usage.cpu.peak_percent), p95_cpu = AVG(resource_usage.cpu.p95_percent), avg_mem = AVG(resource_usage.memory.avg_percent), peak_mem = MAX(resource_usage.memory.peak_percent), p95_mem = AVG(resource_usage.memory.p95_percent), avg_duration = AVG(execution_time.duration_minutes), total_runs = COUNT(*) BY metadata.workload_type.keyword\n| SORT total_runs DESC"
+    },
+    {
+      "id": "kafeju.get_instance_cost_and_specs",
+      "name": "Get Instance Cost and Specs",
+      "description": "Retrieves current cost and technical specifications for any VM instance type from the GCP pricing catalog. Shows pricing across all machine types in the catalog.",
+      "esql_query": "FROM gcp-pricing-catalog\n| KEEP machine_type, cpu_cores, memory_gb, cost_per_hour_usd, cost_per_month_usd, machine_family, region, use_case, description\n| SORT cost_per_hour_usd ASC"
+    },
+    {
+      "id": "kafeju.get_label_workload_patterns",
+      "name": "Get Label Workload Patterns",
+      "description": "Analyzes workload patterns by labels/tags to identify resource consumption by team, environment, and workload type.",
+      "esql_query": "FROM gcp-instance-lifecycle\n| STATS vm_count = COUNT(*), avg_uptime = AVG(instance_lifecycle.uptime_hours) BY labels.team, labels.workload_type, cloud.machine.type\n| SORT vm_count DESC"
+    },
+    {
+      "id": "kafeju.get_vm_sizing_analysis",
+      "name": "Get VM Sizing Analysis",
+      "description": "Analyzes VM sizing efficiency by comparing allocated resources (requested VM size) vs actual usage. Shows which VMs are over-provisioned based on P95 usage patterns. Useful for identifying rightsizing opportunities by team and region.",
+      "esql_query": "FROM gcp-resource-executions-*\n| STATS p95_cpu = AVG(resource_usage.cpu.p95_percent), p95_mem = AVG(resource_usage.memory.p95_percent), avg_cpu_drift = AVG(drift_metrics.cpu.drift_percent), avg_mem_drift = AVG(drift_metrics.memory.drift_percent), total_cost = SUM(cost_actual.total_cost_usd), exec_count = COUNT(*) BY vm_info.vm_type_actual.keyword, metadata.team.keyword, vm_info.zone.keyword\n| SORT avg_cpu_drift DESC"
+    },
+    {
+      "id": "kafeju.predict_resize_needs",
+      "name": "Predict Resize Needs",
+      "description": "Analyzes 30-day CPU usage trends to predict when teams will hit 90% capacity. Calculates growth rates and provides proactive resize recommendations based on real metrics.",
+      "esql_query": "FROM ml-predictions-growth\n| KEEP @timestamp, team, current_avg_cpu, growth_rate_daily, predicted_days_to_90pct, recommendation\n| SORT predicted_days_to_90pct ASC"
+    },
+    {
+      "id": "kafeju.recommend_instance_for_requirements",
+      "name": "Recommend Instance for Requirements",
+      "description": "Recommends GCP instance types based on CPU and memory requirements. Finds instances that meet minimum specs while optimizing for cost. Results should be filtered by the agent based on user's specific CPU/memory needs.",
+      "esql_query": "FROM gcp-pricing-catalog\n| KEEP machine_type, cpu_cores, memory_gb, cost_per_hour_usd, cost_per_month_usd, machine_family, use_case\n| SORT cost_per_hour_usd ASC"
+    }
+  ]
+}

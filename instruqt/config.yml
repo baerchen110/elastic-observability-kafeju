@@ -1,0 +1,15 @@
+version: "3"
+virtualmachines:
+  - name: elastic-vm
+    image: ubuntu-2204-lts
+    machine_type: n1-standard-8
+    allow_external_ingress:
+      - http
+      - https
+    exposed_ports:
+      - port: 5601
+        protocol: tcp
+        label: Kibana
+      - port: 9200
+        protocol: tcp
+        label: Elasticsearch

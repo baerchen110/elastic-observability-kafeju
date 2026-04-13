@@ -1,0 +1,36 @@
+slug: elastic-agent-builder-gcp-drift
+version: 0.1.0
+type: track
+title: "GCP Resource Drift Detection with Elastic Agent Builder"
+teaser: "Use Elastic Agent Builder to detect resource drift, ML anomalies, and build custom tools for GCP infrastructure optimization."
+description: |
+  In this hands-on workshop you will use Elastic's AI Assistant and Agent Builder
+  to analyze GCP VM resource utilization, detect drift between allocated and
+  actual usage, investigate ML-powered anomalies, and build your own custom
+  ES|QL-powered tools.
+
+  **What you will learn:**
+  - How to invoke Agent Builder tools with natural language prompts
+  - How to detect and quantify resource drift across teams and VM types
+  - How ML anomaly detection surfaces zombie VMs and capacity risks
+  - How to create your own Agent Builder tool from an ES|QL query
+
+  **Prerequisites:** Basic familiarity with Elasticsearch and GCP VM concepts.
+icon: https://static-www.elastic.co/v3/assets/bltefdd0b53724fa2ce/blt36f2da8d650732a0/5d0823c3d8ff351753cbf2c5/logo-elastic-mark.svg
+level: intermediate
+tags:
+  - elastic
+  - agent-builder
+  - gcp
+  - machine-learning
+  - resource-optimization
+owner: elastic
+developers:
+  - workshop@elastic.co
+lab_config:
+  overlay: false
+  width: 33
+  position: right
+  enableLoadingMessages: true
+
+checksum: ""

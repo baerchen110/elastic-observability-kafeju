@@ -1,0 +1,102 @@
+[
+  {
+    "id": "kafeju.analyze_vm_usage_patterns",
+    "type": "esql",
+    "description": "Analyzes GCP VM resource usage patterns, identifies drift between requested and actual usage, and highlights over-provisioned instances. Returns CPU/memory usage, drift metrics, and efficiency scores grouped by team, VM type, and zone. Use when asked: 'Show me VM usage patterns', 'Which VMs are over-provisioned?', or 'Where is the most resource waste?'",
+    "tags": ["kafeju", "infrastructure", "vm_usage", "drift"],
+    "configuration": {
+      "query": "FROM gcp-resource-executions-*\n| STATS avg_cpu_used = AVG(resource_usage.cpu.avg_percent), avg_mem_used = AVG(resource_usage.memory.avg_percent), p95_cpu = AVG(resource_usage.cpu.p95_percent), avg_cpu_drift = AVG(drift_metrics.cpu.drift_percent), avg_mem_drift = AVG(drift_metrics.memory.drift_percent), combined_drift = AVG(drift_metrics.combined_drift_score), exec_count = COUNT(*) BY metadata.team.keyword, vm_info.vm_type_actual.keyword, vm_info.zone.keyword\n| SORT combined_drift DESC\n| LIMIT 20",
+      "params": {}
+    }
+  },
+  {
+    "id": "kafeju.compare_team_request_vs_usage",
+    "type": "esql",
+    "description": "Compares what teams have ALLOCATED (VM sizes) vs what they ACTUALLY USE (real metrics). Calculates efficiency scores to identify which teams are over-provisioning the most. Lower efficiency score = more waste. Use when asked: 'Which teams waste the most resources?', 'Compare team efficiency', or 'Who is over-provisioning?'",
+    "tags": ["kafeju", "infrastructure", "vm_usage", "drift"],
+    "configuration": {
+      "query": "FROM gcp-resource-executions-*\n| STATS avg_cpu_used = AVG(resource_usage.cpu.avg_percent), avg_mem_used = AVG(resource_usage.memory.avg_percent), avg_cpu_drift = AVG(drift_metrics.cpu.drift_percent), avg_mem_drift = AVG(drift_metrics.memory.drift_percent), total_cost = SUM(cost_actual.total_cost_usd), vm_count = COUNT(*) BY metadata.team.keyword\n| EVAL efficiency_score = ROUND((avg_cpu_used + avg_mem_used) / 2, 1)\n| SORT efficiency_score ASC\n| LIMIT 20",
+      "params": {}
+    }
+  },
+  {
+    "id": "kafeju.get_vm_sizing_analysis",
+    "type": "esql",
+    "description": "Analyzes VM sizing efficiency by comparing allocated resources vs actual P95 usage. Shows which VMs are over-provisioned and by how much. Use when asked: 'Show me rightsizing opportunities', 'Which VMs can be downsized?', or 'VM sizing analysis by team'.",
+    "tags": ["kafeju", "infrastructure", "vm_usage", "drift"],
+    "configuration": {
+      "query": "FROM gcp-resource-executions-*\n| STATS p95_cpu = AVG(resource_usage.cpu.p95_percent), p95_mem = AVG(resource_usage.memory.p95_percent), avg_cpu_drift = AVG(drift_metrics.cpu.drift_percent), avg_mem_drift = AVG(drift_metrics.memory.drift_percent), combined_drift = AVG(drift_metrics.combined_drift_score), total_cost = SUM(cost_actual.total_cost_usd), exec_count = COUNT(*) BY vm_info.vm_type_actual.keyword, metadata.team.keyword, vm_info.zone.keyword\n| SORT combined_drift DESC\n| LIMIT 20",
+      "params": {}
+    }
+  },
+  {
+    "id": "kafeju.detect_resource_anomalies",
+    "type": "esql",
+    "description": "Identifies VMs with unusual resource usage patterns from ML anomaly predictions. Shows anomaly severity, actual vs typical values, and affected teams. Use when asked: 'Find resource anomalies', 'Which VMs have unusual behavior?', 'Show me zombie VMs', or 'Detect anomalies'.",
+    "tags": ["kafeju", "infrastructure", "ml", "anomaly"],
+    "configuration": {
+      "query": "FROM ml-predictions-anomalies*\n| WHERE record_score > 25\n| SORT record_score DESC\n| KEEP @timestamp, vm_id, vm_type, team, severity, record_score, actual, typical, function_description, partition_field_value\n| LIMIT 20",
+      "params": {}
+    }
+  },
+  {
+    "id": "kafeju.detect_team_anomalies",
+    "type": "esql",
+    "description": "Classifies team workloads by resource consumption pattern: HEAVY_USER (>5 cores avg), LIGHT_USER (<1 core avg), or NORMAL. Helps spot teams with unusual usage that may need rightsizing. Use when asked: 'Classify teams by usage', 'Which teams are heavy or light users?', or 'Team anomaly detection'.",
+    "tags": ["kafeju", "infrastructure", "ml", "anomaly"],
+    "configuration": {
+      "query": "FROM gcp-resource-executions-*\n| STATS avg_cores = AVG(resource_usage.cpu.avg_cores_used), avg_mem_gb = AVG(resource_usage.memory.avg_gb_used), exec_count = COUNT(*) BY metadata.team.keyword, metadata.workload_type.keyword\n| EVAL classification = CASE(avg_cores > 5, \"HEAVY_USER\", avg_cores < 1, \"LIGHT_USER\", \"NORMAL\")\n| SORT metadata.team.keyword, avg_cores DESC\n| LIMIT 30",
+      "params": {}
+    }
+  },
+  {
+    "id": "kafeju.predict_resize_needs",
+    "type": "esql",
+    "description": "Predicts when teams will hit 90% CPU capacity based on growth trends. Shows growth rate, days until threshold, and resize recommendations. Use when asked: 'Which teams need resizing?', 'Predict capacity needs', or 'When will we run out of capacity?'.",
+    "tags": ["kafeju", "infrastructure", "ml", "capacity"],
+    "configuration": {
+      "query": "FROM ml-predictions-growth\n| KEEP @timestamp, team, current_avg_cpu, growth_rate_daily, predicted_days_to_90pct, recommendation\n| SORT predicted_days_to_90pct ASC\n| LIMIT 20",
+      "params": {}
+    }
+  },
+  {
+    "id": "kafeju.get_instance_cost_and_specs",
+    "type": "esql",
+    "description": "Retrieves cost and specs for all GCP VM instance types from the pricing catalog. Shows CPU cores, memory, hourly/monthly cost, and use case. Use when asked: 'Show me instance pricing', 'What VM types are available?', or 'Compare machine type costs'.",
+    "tags": ["kafeju", "infrastructure", "cost"],
+    "configuration": {
+      "query": "FROM gcp-pricing-catalog\n| KEEP machine_type, cpu_cores, memory_gb, cost_per_hour_usd, cost_per_month_usd, machine_family, region, use_case, description\n| SORT cost_per_hour_usd ASC\n| LIMIT 30",
+      "params": {}
+    }
+  },
+  {
+    "id": "kafeju.calculate_cost_optimization_1",
+    "type": "esql",
+    "description": "Calculates potential cost savings from VM rightsizing. Filters VMs with >20% drift and shows total cost, P95 usage, and drift by team and VM type. Use when asked: 'How much can we save from rightsizing?', 'Calculate cost optimization', or 'Show me savings opportunities'.",
+    "tags": ["kafeju", "infrastructure", "cost"],
+    "configuration": {
+      "query": "FROM gcp-resource-executions-*\n| WHERE drift_metrics.combined_drift_score > 20\n| STATS avg_cpu_drift = AVG(drift_metrics.cpu.drift_percent), avg_mem_drift = AVG(drift_metrics.memory.drift_percent), p95_cpu = AVG(resource_usage.cpu.p95_percent), p95_mem = AVG(resource_usage.memory.p95_percent), total_cost = SUM(cost_actual.total_cost_usd), exec_count = COUNT(*) BY metadata.team.keyword, vm_info.vm_type_actual.keyword\n| SORT total_cost DESC\n| LIMIT 20",
+      "params": {}
+    }
+  },
+  {
+    "id": "kafeju.recommend_instance_for_requirements",
+    "type": "esql",
+    "description": "Recommends the cheapest GCP instance types that meet CPU and memory requirements. Use when asked: 'What instance should I use for 4 CPUs and 16GB?', 'Recommend a VM type', or 'Find cheapest instance for my workload'.",
+    "tags": ["kafeju", "infrastructure", "cost"],
+    "configuration": {
+      "query": "FROM gcp-pricing-catalog\n| KEEP machine_type, cpu_cores, memory_gb, cost_per_hour_usd, cost_per_month_usd, machine_family, use_case\n| SORT cost_per_hour_usd ASC\n| LIMIT 30",
+      "params": {}
+    }
+  },
+  {
+    "id": "kafeju.get_cost_projection",
+    "type": "esql",
+    "description": "Shows daily cost trends to project future spending. Aggregates total cost and run count per day. Use when asked: 'What is our cost trend?', 'Project our spending', or 'Show daily costs'.",
+    "tags": ["kafeju", "infrastructure", "cost"],
+    "configuration": {
+      "query": "FROM gcp-resource-executions-*\n| STATS daily_cost = SUM(cost_actual.total_cost_usd), daily_runs = COUNT(*) BY execution_date = DATE_TRUNC(1 day, execution_time.started_at)\n| SORT execution_date DESC\n| LIMIT 30",
+      "params": {}
+    }
+  }
+]

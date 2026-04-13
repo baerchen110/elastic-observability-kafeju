@@ -1,0 +1,6 @@
+.env
+.elastic-credentials
+.venv/
+node_modules/
+__pycache__/
+*.pyc
