@@ -18,24 +18,19 @@ info()  { echo -e "${GREEN}[INFO]${NC}  $*"; }
 warn()  { echo -e "${YELLOW}[WARN]${NC}  $*"; }
 fail()  { echo -e "${RED}[FAIL]${NC}  $*"; exit 1; }
 
-# ── Pre-flight checks ─────────────────────────────────────────────────
-command -v docker >/dev/null 2>&1 || fail "docker is not installed"
-command -v curl   >/dev/null 2>&1 || fail "curl is not installed"
+command -v docker  >/dev/null 2>&1 || fail "docker is not installed"
+command -v curl    >/dev/null 2>&1 || fail "curl is not installed"
 command -v python3 >/dev/null 2>&1 || fail "python3 is not installed"
 
 if [ ! -f "$DOCKER_DIR/.env" ]; then
-  info "Creating $DOCKER_DIR/.env from .env.example"
   cp "$DOCKER_DIR/.env.example" "$DOCKER_DIR/.env"
 fi
-
-# Source the docker .env for variable defaults
 set -a; source "$DOCKER_DIR/.env"; set +a
 
-# ── 1. Start Docker Compose ───────────────────────────────────────────
-info "Starting Elasticsearch and Kibana..."
-docker compose -f "$DOCKER_DIR/docker-compose.yml" --env-file "$DOCKER_DIR/.env" up -d
+# ── 1. Start Elasticsearch only ───────────────────────────────────────
+info "Starting Elasticsearch..."
+docker compose -f "$DOCKER_DIR/docker-compose.yml" --env-file "$DOCKER_DIR/.env" up -d elasticsearch
 
-# ── 2. Wait for Elasticsearch ─────────────────────────────────────────
 info "Waiting for Elasticsearch at $ES_URL..."
 for i in $(seq 1 60); do
   if curl -sf -u "$ES_AUTH" "$ES_URL/_cluster/health" >/dev/null 2>&1; then
@@ -46,18 +41,65 @@ for i in $(seq 1 60); do
   sleep 5
 done
 
-# Start trial license
 curl -sf -X POST -u "$ES_AUTH" "$ES_URL/_license/start_trial?acknowledge=true" \
   -H "Content-Type: application/json" >/dev/null 2>&1 || true
 
-# ── 3. Wait for Kibana ────────────────────────────────────────────────
+# ── 2. Generate Kibana service account token ──────────────────────────
+info "Generating Kibana service account token..."
+TOKEN_RESP=$(curl -s -X POST -u "$ES_AUTH" \
+  "$ES_URL/_security/service/elastic/kibana/credential/token/bootstrap-token" \
+  -H "Content-Type: application/json")
+SERVICE_TOKEN=$(echo "$TOKEN_RESP" | python3 -c "import sys,json; print(json.load(sys.stdin)['token']['value'])" 2>/dev/null || true)
+
+if [ -z "$SERVICE_TOKEN" ]; then
+  SERVICE_TOKEN=$(echo "$TOKEN_RESP" | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+if 'error' in d and 'already exists' in str(d['error']):
+    pass
+print('')
+" 2>/dev/null)
+  if [ -z "$SERVICE_TOKEN" ]; then
+    info "Token already exists, deleting and recreating..."
+    curl -s -X DELETE -u "$ES_AUTH" \
+      "$ES_URL/_security/service/elastic/kibana/credential/token/bootstrap-token" >/dev/null 2>&1
+    TOKEN_RESP=$(curl -s -X POST -u "$ES_AUTH" \
+      "$ES_URL/_security/service/elastic/kibana/credential/token/bootstrap-token" \
+      -H "Content-Type: application/json")
+    SERVICE_TOKEN=$(echo "$TOKEN_RESP" | python3 -c "import sys,json; print(json.load(sys.stdin)['token']['value'])")
+  fi
+fi
+
+if [ -z "$SERVICE_TOKEN" ]; then
+  fail "Could not generate Kibana service account token"
+fi
+info "Service token generated"
+
+# Write token to .env so docker compose picks it up
+if grep -q "^KIBANA_SERVICE_TOKEN=" "$DOCKER_DIR/.env" 2>/dev/null; then
+  python3 -c "
+import re, sys
+with open('$DOCKER_DIR/.env') as f:
+    content = f.read()
+content = re.sub(r'^KIBANA_SERVICE_TOKEN=.*$', 'KIBANA_SERVICE_TOKEN=$SERVICE_TOKEN', content, flags=re.MULTILINE)
+with open('$DOCKER_DIR/.env', 'w') as f:
+    f.write(content)
+"
+else
+  echo "KIBANA_SERVICE_TOKEN=$SERVICE_TOKEN" >> "$DOCKER_DIR/.env"
+fi
+
+# ── 3. Start Kibana ──────────────────────────────────────────────────
+info "Starting Kibana..."
+docker compose -f "$DOCKER_DIR/docker-compose.yml" --env-file "$DOCKER_DIR/.env" up -d kibana
+
 info "Waiting for Kibana at $KIBANA_URL..."
-for i in $(seq 1 60); do
+for i in $(seq 1 90); do
   if curl -sf "$KIBANA_URL/api/status" 2>/dev/null | grep -q '"level":"available"'; then
     info "Kibana is ready"
     break
   fi
-  [ "$i" -eq 60 ] && fail "Kibana did not start within 5 minutes"
+  [ "$i" -eq 90 ] && fail "Kibana did not start within 7.5 minutes"
   sleep 5
 done
 
@@ -108,7 +150,6 @@ print(errs)" 2>/dev/null)
 done
 info "Loaded $TOTAL_LOADED total documents"
 
-# Refresh all indices
 curl -s -X POST -u "$ES_AUTH" "$ES_URL/_refresh" >/dev/null
 
 # ── 6. Import Kibana saved objects ────────────────────────────────────
@@ -137,13 +178,12 @@ for v in views:
             "id": v["id"],
             "title": v["title"],
             "name": v.get("name", v["title"]),
-            "timeFieldName": v.get("timeFieldName", ""),
             "allowNoIndex": v.get("allowNoIndex", True),
         },
         "override": True
     }
-    if not body["data_view"]["timeFieldName"]:
-        del body["data_view"]["timeFieldName"]
+    if v.get("timeFieldName"):
+        body["data_view"]["timeFieldName"] = v["timeFieldName"]
 
     r = subprocess.run(["curl", "-s", "-X", "POST", f"{kibana}/api/data_views/data_view",
         "-u", auth, "-H", "kbn-xsrf: true", "-H", "Content-Type: application/json",
@@ -152,9 +192,6 @@ for v in views:
         resp = json.loads(r.stdout)
         if "data_view" in resp:
             created += 1
-        else:
-            msg = resp.get("message", resp.get("error", ""))[:60]
-            print(f"  WARN {v['id']}: {msg}")
     except:
         pass
 
@@ -181,13 +218,8 @@ for t in tools:
         resp = json.loads(r.stdout)
         if resp.get("id") or "id" in resp:
             created += 1
-        else:
-            msg = resp.get("message", resp.get("error", ""))
-            if isinstance(msg, str):
-                msg = msg[:60]
-            print(f"  WARN {t.get('id','?')}: {msg}")
     except:
-        print(f"  WARN {t.get('id','?')}: {r.stdout[:80]}")
+        pass
 
 print(f"  Created {created}/{len(tools)} tools")
 PYEOF
@@ -201,6 +233,10 @@ es, auth, jobpath = sys.argv[1], sys.argv[2], sys.argv[3]
 
 with open(jobpath) as f:
     entries = json.load(f)
+
+STRIP = {"job_id", "job_type", "job_version", "create_time", "model_snapshot_id",
+         "model_snapshot_min_version", "datafeed_config", "finished_time",
+         "node", "open_time"}
 
 def api(method, path, body=None):
     cmd = ["curl", "-s", "-X", method, f"{es}{path}",
@@ -218,42 +254,30 @@ for entry in entries:
     feed = entry.get("datafeed")
     jid = job["job_id"]
 
-    job_body = {k: v for k, v in job.items()
-                if k not in ("job_id", "job_type", "job_version", "create_time",
-                             "model_snapshot_id", "model_snapshot_min_version",
-                             "datafeed_config", "finished_time", "node", "open_time")}
+    job_body = {k: v for k, v in job.items() if k not in STRIP}
     job_body["allow_lazy_open"] = True
     job_body.setdefault("analysis_limits", {})["model_memory_limit"] = "256mb"
 
     r = api("PUT", f"/_ml/anomaly_detectors/{jid}", job_body)
-    if r.get("job_id"):
-        print(f"  job {jid}: created")
-    else:
-        msg = r.get("error", {})
-        if isinstance(msg, dict):
-            msg = msg.get("reason", "")[:80]
-        print(f"  job {jid}: {msg}")
+    status = "created" if r.get("job_id") else r.get("error",{}).get("reason","failed")[:60]
+    print(f"  job {jid}: {status}")
 
     if feed:
         fid = feed.get("datafeed_id", f"datafeed-{jid}")
         feed_body = {k: v for k, v in feed.items()
                      if k not in ("datafeed_id", "authorization", "query_delay")}
         r = api("PUT", f"/_ml/datafeeds/{fid}", feed_body)
-        if r.get("datafeed_id"):
-            print(f"  datafeed {fid}: created")
-        else:
-            msg = r.get("error", {})
-            if isinstance(msg, dict):
-                msg = msg.get("reason", "")[:80]
-            print(f"  datafeed {fid}: {msg}")
+        status = "created" if r.get("datafeed_id") else r.get("error",{}).get("reason","failed")[:60]
+        print(f"  datafeed {fid}: {status}")
 
-    r = api("POST", f"/_ml/anomaly_detectors/{jid}/_open", {})
-    r = api("POST", f"/_ml/datafeeds/datafeed-{jid}/_start", {})
+    api("POST", f"/_ml/anomaly_detectors/{jid}/_open", {})
+    fid = f"datafeed-{jid}"
+    api("POST", f"/_ml/datafeeds/{fid}/_start", {})
 
 print("  ML jobs opened and datafeeds started")
 PYEOF
 
-# ── Done ──────────────────────────────────────────────────────────────
+# ── Summary ───────────────────────────────────────────────────────────
 echo ""
 info "=========================================="
 info " Workshop bootstrap complete!"
@@ -263,9 +287,8 @@ info " Kibana:        $KIBANA_URL"
 info ""
 info " Loaded:"
 
-curl -s -u "$ES_AUTH" "$ES_URL/_cat/count" 2>/dev/null | while read -r _ _ count; do
-  echo "   - $count total documents"
-done
+TOTAL=$(curl -s -u "$ES_AUTH" "$ES_URL/_cat/count" 2>/dev/null | awk '{print $3}')
+echo "   - $TOTAL total documents"
 
 SO_COUNT=$(curl -s -u "$ES_AUTH" "$KIBANA_URL/api/saved_objects/_find?type=dashboard&per_page=1" \
   -H "kbn-xsrf: true" 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin).get('total',0))" 2>/dev/null)

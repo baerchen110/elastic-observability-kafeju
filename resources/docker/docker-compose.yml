@@ -33,8 +33,7 @@ services:
     container_name: kafeju-kibana
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-      - ELASTICSEARCH_USERNAME=elastic
-      - ELASTICSEARCH_PASSWORD=${ELASTIC_PASSWORD:-workshopAdmin1!}
+      - ELASTICSEARCH_SERVICEACCOUNTTOKEN=${KIBANA_SERVICE_TOKEN}
       - SERVER_NAME=kafeju-kibana
       - SERVER_HOST=0.0.0.0
       - XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=kafeju-workshop-encryption-key-32chars!!
