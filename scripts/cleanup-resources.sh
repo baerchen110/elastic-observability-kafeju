@@ -90,7 +90,39 @@ else
   warn "No resources/ml/jobs.json found, skipping"
 fi
 
-# ── 2. Delete Agent Builder tools ─────────────────────────────────────
+# ── 2. Delete Agent Builder agents ────────────────────────────────────
+AGENT_FILE="$RESOURCES/kibana/agent-definitions.json"
+if [ -f "$AGENT_FILE" ]; then
+  info "Removing Agent Builder agents..."
+  python3 - "$KIBANA_URL" "$AUTH" "$AGENT_FILE" << 'PYEOF'
+import sys, json, subprocess
+
+kibana, auth, agentpath = sys.argv[1], sys.argv[2], sys.argv[3]
+
+with open(agentpath) as f:
+    agents = json.load(f)
+
+deleted = 0
+for a in agents:
+    aid = a.get("id", "")
+    if not aid:
+        continue
+    r = subprocess.run(["curl", "-s", "-o", "/dev/null", "-w", "%{http_code}",
+        "-X", "DELETE", f"{kibana}/api/agent_builder/agents/{aid}",
+        "-u", auth, "-H", "kbn-xsrf: true"],
+        capture_output=True, text=True)
+    code = r.stdout.strip()
+    if code in ("200", "204"):
+        deleted += 1
+        print(f"  {aid}: deleted")
+    else:
+        print(f"  {aid}: not found (HTTP {code})")
+
+print(f"  Deleted {deleted}/{len(agents)} agents")
+PYEOF
+fi
+
+# ── 3. Delete Agent Builder tools ─────────────────────────────────────
 info "Removing Agent Builder tools..."
 if [ -f "$RESOURCES/kibana/agent-tools.json" ]; then
   python3 - "$KIBANA_URL" "$AUTH" "$RESOURCES/kibana/agent-tools.json" << 'PYEOF'

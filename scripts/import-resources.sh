@@ -263,7 +263,41 @@ for e in errors:
     print(f"  ERROR: {e}")
 PYEOF
 
-# ── 6. Create ML jobs + datafeeds ─────────────────────────────────────
+# ── 6. Create Agent Builder agents ─────────────────────────────────────
+AGENT_FILE="$RESOURCES/kibana/agent-definitions.json"
+if [ -f "$AGENT_FILE" ]; then
+  info "Creating Agent Builder agents..."
+  python3 - "$KIBANA_URL" "$AUTH" "$AGENT_FILE" << 'PYEOF'
+import sys, json, subprocess
+
+kibana, auth, agentpath = sys.argv[1], sys.argv[2], sys.argv[3]
+
+with open(agentpath) as f:
+    agents = json.load(f)
+
+created = 0; errors = []
+for a in agents:
+    aid = a.get("id", "?")
+    a.pop("readonly", None)
+    r = subprocess.run(["curl", "-s", "-X", "POST", f"{kibana}/api/agent_builder/agents",
+        "-u", auth, "-H", "kbn-xsrf: true", "-H", "Content-Type: application/json",
+        "-d", json.dumps(a)], capture_output=True, text=True)
+    try:
+        resp = json.loads(r.stdout)
+        if resp.get("id") or "id" in resp:
+            created += 1
+        else:
+            errors.append(f"{aid}: {resp.get('message', resp.get('error','?'))[:80]}")
+    except:
+        errors.append(f"{aid}: {r.stdout[:80]}")
+
+print(f"  Created {created}/{len(agents)} agents")
+for e in errors:
+    print(f"  ERROR: {e}")
+PYEOF
+fi
+
+# ── 7. Create ML jobs + datafeeds ─────────────────────────────────────
 info "Creating ML jobs and datafeeds..."
 python3 - "$ES_URL" "$AUTH" "$RESOURCES/ml/jobs.json" << 'PYEOF'
 import sys, json, subprocess
