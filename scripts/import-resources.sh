@@ -279,6 +279,7 @@ created = 0; errors = []
 for a in agents:
     aid = a.get("id", "?")
     a.pop("readonly", None)
+    a.pop("type", None)
     r = subprocess.run(["curl", "-s", "-X", "POST", f"{kibana}/api/agent_builder/agents",
         "-u", auth, "-H", "kbn-xsrf: true", "-H", "Content-Type: application/json",
         "-d", json.dumps(a)], capture_output=True, text=True)
