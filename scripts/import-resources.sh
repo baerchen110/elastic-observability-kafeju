@@ -111,36 +111,52 @@ info "Indices: $IDX_CREATED created, $IDX_SKIPPED skipped, $IDX_FAILED failed"
 # ── 2. Bulk-load seed data ────────────────────────────────────────────
 info "Loading seed data..."
 TOTAL_LOADED=0; TOTAL_ERRORS=0
+BULK_RESP=$(mktemp)
 for data_file in "$RESOURCES/elasticsearch/seed-data"/*.ndjson; do
   idx=$(basename "$data_file" .ndjson)
   DOC_COUNT=$(( $(wc -l < "$data_file" | tr -d ' ') / 2 ))
 
-  RESP=$(curl -s -X POST -u "$AUTH" "$ES_URL/_bulk" \
+  HTTP_CODE=$(curl -s -o "$BULK_RESP" -w "%{http_code}" --max-time 120 \
+    -X POST -u "$AUTH" "$ES_URL/_bulk" \
     -H "Content-Type: application/x-ndjson" \
     --data-binary "@$data_file")
-  ERRORS=$(echo "$RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('errors',True))" 2>/dev/null)
-  if [ "$ERRORS" = "False" ]; then
-    echo "  $idx: $DOC_COUNT docs"
-    TOTAL_LOADED=$((TOTAL_LOADED + DOC_COUNT))
-  else
-    ERROR_COUNT=$(echo "$RESP" | python3 -c "
-import sys,json
-d=json.load(sys.stdin)
+
+  if [ "$HTTP_CODE" != "200" ]; then
+    warn "$idx: HTTP $HTTP_CODE ($(head -c 200 "$BULK_RESP"))"
+    continue
+  fi
+
+  RESULT=$(python3 -c "
+import json
+with open('$BULK_RESP') as f: d = json.load(f)
 items = d.get('items',[])
 errs = [i for i in items if 'error' in i.get('index',i.get('create',{}))]
-print(len(errs))
-for e in errs[:3]:
-    op = e.get('index', e.get('create',{}))
-    print(f'    {op.get(\"_index\",\"?\")}: {op.get(\"error\",{}).get(\"reason\",\"?\")[:80]}')
-" 2>/dev/null)
-    warn "$idx: $DOC_COUNT docs, errors: $ERROR_COUNT"
+if not errs:
+    print(f'ok {len(items)}')
+else:
+    print(f'errors {len(errs)} {len(items)}')
+    for e in errs[:3]:
+        op = e.get('index', e.get('create',{}))
+        print(f'  {op.get(\"_index\",\"?\")}: {op.get(\"error\",{}).get(\"reason\",\"?\")[:80]}')
+" 2>/dev/null || echo "parse_error 0 0")
+
+  if [[ "$RESULT" == ok* ]]; then
+    echo "  $idx: $DOC_COUNT docs"
     TOTAL_LOADED=$((TOTAL_LOADED + DOC_COUNT))
-    TOTAL_ERRORS=$((TOTAL_ERRORS + $(echo "$ERROR_COUNT" | head -1)))
+  elif [[ "$RESULT" == errors* ]]; then
+    echo "  $idx: $DOC_COUNT docs (some errors)"
+    echo "$RESULT" | tail -n +2 | sed 's/^/    /'
+    ERR_N=$(echo "$RESULT" | head -1 | awk '{print $2}')
+    TOTAL_LOADED=$((TOTAL_LOADED + DOC_COUNT))
+    TOTAL_ERRORS=$((TOTAL_ERRORS + ERR_N))
+  else
+    warn "$idx: failed to parse bulk response"
   fi
 done
+rm -f "$BULK_RESP"
 info "Loaded $TOTAL_LOADED total documents ($TOTAL_ERRORS errors)"
 
-curl -s -X POST -u "$AUTH" "$ES_URL/_refresh" >/dev/null
+curl -s --max-time 30 -X POST -u "$AUTH" "$ES_URL/_refresh" >/dev/null
 
 # ── 3. Import Kibana saved objects ────────────────────────────────────
 info "Importing Kibana saved objects (dashboards, visualizations)..."
