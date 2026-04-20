@@ -1,11 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-KIBANA_URL="http://localhost:5601"
 ES_USER="elastic"
 ES_PASS="workshopAdmin1!"
-
-echo "Creating the zombie VM detector tool..."
+KIBANA_URL="http://localhost:5601"
 
 curl -s -X POST "$KIBANA_URL/api/agent_builder/tools" \
   -u "$ES_USER:$ES_PASS" \
@@ -13,14 +11,32 @@ curl -s -X POST "$KIBANA_URL/api/agent_builder/tools" \
   -H "Content-Type: application/json" \
   -d '{
     "id": "participant.find_zombie_vms",
-    "type": "esql",
-    "description": "Finds zombie VMs: machines with very low CPU usage (<15%) running on expensive instance types. Shows which teams are wasting money on idle resources.",
+    "description": "Finds zombie VMs: machines with very low CPU usage (under 15%) that are wasting money. Shows which teams have idle resources ranked by total cost waste. Use when asked about zombie VMs, idle instances, or wasted resources.",
     "tags": ["participant", "infrastructure", "cost"],
     "configuration": {
-      "query": "FROM gcp-resource-executions-workshop\n| WHERE resource_usage.cpu.avg_percent < 15\n  AND vm_info.vm_type_actual.keyword IN (\"n2-standard-16\", \"n2-standard-32\", \"c2-standard-8\")\n| STATS\n    avg_cpu = AVG(resource_usage.cpu.avg_percent),\n    avg_drift = AVG(drift_metrics.combined_drift_score),\n    total_cost = SUM(cost_actual.total_cost_usd),\n    occurrences = COUNT(*)\n  BY metadata.team.keyword,\n     vm_info.vm_type_actual.keyword,\n     resource_name.keyword\n| SORT total_cost DESC\n| LIMIT 15",
+      "query": "FROM gcp-resource-executions-*\n| WHERE resource_usage.cpu.avg_percent < 15\n  AND vm_info.vm_type_actual IS NOT NULL\n| STATS\n    avg_cpu = AVG(resource_usage.cpu.avg_percent),\n    avg_drift = AVG(drift_metrics.combined_drift_score),\n    total_cost = SUM(cost_actual.total_cost_usd),\n    occurrences = COUNT(*)\n  BY metadata.team, vm_info.vm_type_actual, resource_name\n| SORT total_cost DESC\n| LIMIT 15",
       "params": {}
     }
-  }' 2>/dev/null | python3 -m json.tool
+  }' > /dev/null 2>&1
 
-echo ""
-echo "Tool created. Test it by asking the AI Assistant: 'Find zombie VMs'"
+curl -s -u "$ES_USER:$ES_PASS" "$KIBANA_URL/api/agent_builder/agents" \
+  -H "kbn-xsrf: true" | python3 -c "
+import json, sys, subprocess
+agents = json.load(sys.stdin)['results']
+kafeju = next(a for a in agents if a['id'] == 'kafuju')
+tools = kafeju['configuration']['tools'][0]['tool_ids']
+if 'participant.find_zombie_vms' not in tools:
+    tools.append('participant.find_zombie_vms')
+kafeju.pop('readonly', None)
+kafeju.pop('type', None)
+with open('/tmp/agent-update.json', 'w') as f:
+    json.dump(kafeju, f)
+"
+
+curl -s -X PUT "$KIBANA_URL/api/agent_builder/agents/kafuju" \
+  -u "$ES_USER:$ES_PASS" \
+  -H "kbn-xsrf: true" \
+  -H "Content-Type: application/json" \
+  -d @/tmp/agent-update.json > /dev/null 2>&1
+
+echo "Zombie VM detector tool created and wired into Kafeju agent."

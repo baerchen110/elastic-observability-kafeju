@@ -1,7 +1,7 @@
 ---
-slug: ml-anomaly-detection
-title: "ML-Powered Anomaly Detection"
-teaser: "Use ML anomaly predictions and Agent Builder to find zombie VMs, CPU spikes, and capacity risks."
+slug: dissect-a-tool
+title: "Explore Data and Dissect a Tool"
+teaser: "Understand the data model and reverse-engineer an existing Agent Builder tool."
 type: challenge
 timelimit: 1500
 tabs:
@@ -15,91 +15,98 @@ tabs:
 notes:
   - type: text
     contents: |
-      # ML Anomaly Detection
+      # Dissect a Tool
 
-      Elastic's machine learning can learn normal resource usage baselines
-      and flag deviations automatically. Combined with Agent Builder, you can
-      investigate anomalies using natural language — no query writing needed.
+      Every Agent Builder tool is just three things:
+      1. An **ID** — unique identifier
+      2. A **description** — tells the AI when to use it
+      3. An **ES|QL query** — the actual work it does
 
-      In this challenge you will investigate ML-detected anomalies including
-      zombie VMs, sudden CPU spikes, and teams approaching capacity limits.
+      In this challenge you will explore the data, then reverse-engineer an
+      existing tool to understand exactly how it works.
 ---
 
-# Challenge 2: ML-Powered Anomaly Detection
+# Challenge 2: Explore Data and Dissect a Tool
 
-Your ML models have been analyzing VM resource patterns and flagging anomalies.
-Some are critical. Your job: investigate the most important ones and determine
-what action to take.
+## Step 1: Explore the Data in Discover (10 min)
 
-## Step 1: Find Resource Anomalies
+1. Open **Discover** (hamburger menu > Analytics > Discover)
+2. Select the **gcp-resource-executions-*** data view
+3. Set the time range to **Last 1 year**
+4. Expand a document and find these key fields:
 
-Open the **AI Assistant** and ask:
+| Field | What It Means |
+|-------|--------------|
+| `drift_metrics.combined_drift_score` | % of resources allocated but unused |
+| `resource_usage.cpu.avg_percent` | Actual average CPU utilization |
+| `resource_usage.cpu.p95_percent` | 95th percentile CPU (peak baseline) |
+| `metadata.team` | Team responsible for this VM |
+| `cost_actual.total_cost_usd` | Cost of this execution run |
+| `vm_info.vm_type_actual` | Machine type (e.g. n2-standard-16) |
 
-> **Detect resource anomalies — show me VMs with unusual behavior, especially critical ones.**
+**Question:** If `combined_drift_score` is 70, what does that mean in
+practical terms?
 
-This invokes `detect_resource_anomalies`. The results show:
-- `severity` — CRITICAL, HIGH, MEDIUM, or LOW
-- `record_score` — how anomalous (higher = more unusual)
-- `function_description` — what type of anomaly (e.g., "Low CPU usage (zombie)")
-- `actual` vs `typical` — what the VM is doing vs what's normal
+## Step 2: Dissect a Tool via the API (10 min)
 
-**Questions:**
-- How many CRITICAL anomalies are there?
-- What is the most common anomaly type?
+Open the **Terminal** tab and fetch all tools:
 
-## Step 2: Investigate a Zombie VM
+```bash
+curl -s -u elastic:workshopAdmin1! \
+  http://localhost:5601/api/agent_builder/tools \
+  -H "kbn-xsrf: true" | python3 -c "
+import json, sys
+tools = json.load(sys.stdin)
+for t in tools:
+    if t.get('id') == 'kafeju.analyze_vm_usage_patterns':
+        print('=== TOOL ANATOMY ===')
+        print(f\"ID:          {t['id']}\")
+        print(f\"Description: {t['description'][:100]}...\")
+        print(f\"Query:\")
+        print(t['configuration']['query'])
+"
+```
 
-Look for anomalies with `function_description` = "Low CPU usage (zombie)".
+Study the output:
+- The **ID** identifies the tool uniquely
+- The **description** tells the AI *when* to use it (routing logic)
+- The **ES|QL query** is what actually runs against Elasticsearch
 
-These are VMs that have been running at near-zero utilization for extended
-periods — they are likely forgotten and should be terminated.
+## Step 3: Run the Query Yourself
 
-Ask the AI Assistant:
+Copy the ES|QL query from Step 2 and paste it into **Discover > ES|QL
+mode** (toggle at the top of Discover). Run it.
 
-> **Which team owns the zombie VMs with low CPU usage? What VM types are they running?**
+You should see a table of VMs grouped by team and machine type, with
+drift scores and CPU/memory usage. This is the raw data the agent sees.
 
-**Key finding:** The `devops-infra` team is running **n2-standard-32** instances
-(32 cores, 128 GB RAM) at ~3% CPU. That is over $1,100/month per VM — doing
-almost nothing.
+Now go to the **AI Assistant** > **Kafeju** and ask:
 
-## Step 3: Classify Team Workload Patterns
+> **"Show me VM usage patterns and where drift is highest."**
 
-Ask the AI Assistant:
+Compare the raw query results with the agent's narrative answer. The
+tool provides data; the AI provides interpretation.
 
-> **Classify each team's workloads — which are heavy users, light users, or normal?**
+## Step 4: Spot the Gaps
 
-This invokes `detect_team_anomalies`. Review:
-- `HEAVY_USER` teams (>5 cores avg) — expected for ML training, not for monitoring
-- `LIGHT_USER` teams (<1 core avg) — candidates for downsizing
-- Compare `avg_cores` across teams and workload types
+Test these three questions in the Kafeju agent. For each, note whether
+it gives a structured data answer or a vague/generic response:
 
-**Question:** Is there a team classified as HEAVY_USER that shouldn't be? Or a LIGHT_USER running large VMs?
+1. **"Show me VM usage patterns"**
+   - Expected: Works (uses `analyze_vm_usage_patterns`)
 
-## Step 4: Predict Capacity Needs
+2. **"What's the cheapest region for my workload?"**
+   - Expected: Fails — no tool covers regional pricing comparison
 
-Ask:
+3. **"Find zombie VMs wasting money"**
+   - Expected: Fails — no tool specifically targets low-CPU expensive VMs
 
-> **Which teams will hit 90% CPU capacity soonest? Show me the resize predictions.**
-
-This invokes `predict_resize_needs`. Look for:
-- Teams with `predicted_days_to_90pct` < 30 — need **urgent** action
-- Teams with `recommendation` = "URGENT_RESIZE"
-- The `growth_rate_daily` shows how fast usage is climbing
-
-**Question:** Which team will hit capacity first, and how many days away?
-
-## Step 5: Explore the Anomaly Dashboard
-
-1. Go to **Dashboards** > **Anomaly Detection & Capacity Planning**
-2. Review:
-   - **Anomalies by Severity** — the pie chart showing the distribution
-   - **Anomaly Timeline** — when anomalies are clustering
-   - **Top Anomalies** — the detail table
-   - **Growth Trends** — which teams are growing fastest
+Write down which questions fail. You will build the tools to fill these
+gaps in the next challenges.
 
 ## Check Your Work
 
-Before clicking **Check**, confirm you can answer:
-
-> 1. **Name one zombie VM scenario:** Which team, what VM type, what CPU%?
-> 2. **Which team needs urgent resizing?** (Hint: check `predicted_days_to_90pct`)
+Before clicking **Check**, confirm:
+- You ran the `analyze_vm_usage_patterns` ES|QL query in Discover
+- You can name the 3 components of every tool (ID, description, query)
+- You identified at least 1 question the agent cannot answer

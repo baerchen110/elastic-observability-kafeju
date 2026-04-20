@@ -1,9 +1,9 @@
 ---
-slug: resource-drift-detection
-title: "Detect GCP Resource Drift"
-teaser: "Use Agent Builder tools to find over-provisioned VMs and quantify resource waste."
+slug: from-consumer-to-creator
+title: "From Consumer to Creator"
+teaser: "Explore the Kafeju agent and discover what it can — and can't — do."
 type: challenge
-timelimit: 1500
+timelimit: 1200
 tabs:
   - title: Kibana
     type: service
@@ -15,85 +15,88 @@ tabs:
 notes:
   - type: text
     contents: |
-      # What is Resource Drift?
+      # From Consumer to Creator
 
-      Resource drift occurs when the resources **allocated** to a VM differ
-      significantly from what it **actually uses**. A team running an
-      n2-standard-32 (32 vCPU, 128 GB RAM) at 8% CPU utilization has massive
-      drift — and massive waste.
+      In Workshop 1, you used the Observability AI Assistant with built-in
+      tools. The tools were pre-made — you were a **consumer** of AI.
 
-      In this challenge you will use Elastic Agent Builder to detect and
-      quantify drift across your GCP infrastructure.
+      In this workshop, you become a **creator**. You will build your own
+      tools and wire them into a custom agent called **Kafeju** — a GCP
+      cost-optimization agent that detects resource drift and recommends
+      rightsizing.
+
+      First, let's explore what Kafeju can already do — and find its gaps.
 ---
 
-# Challenge 1: Detect GCP Resource Drift
+# Challenge 1: From Consumer to Creator
 
-Your organization runs hundreds of GCP VMs across 9 teams. The monthly cloud
-bill keeps climbing, but nobody knows how much of that spend is actually
-necessary. Your job: find where the waste is.
-
-## Step 1: Explore the Data
+## Step 1: Log In and Meet Kafeju
 
 1. Open the **Kibana** tab
 2. Log in with: `elastic` / `workshopAdmin1!`
-3. Go to **Discover** (hamburger menu > Analytics > Discover)
-4. Select the **GCP Resource Executions** data view
-5. Set the time range to **Last 1 year**
+3. Click the **AI Assistant** icon (sparkle in the top nav)
+4. In the agent selector dropdown, choose **Kafeju**
 
-Browse the data. Each document represents a VM execution with fields like:
-- `resource_usage.cpu.avg_percent` — actual CPU usage
-- `drift_metrics.combined_drift_score` — how far off the allocation is
-- `metadata.team` — which team owns the VM
-- `vm_info.vm_type_actual` — the machine type (e.g., n2-standard-16)
+Kafeju is a custom agent with custom tools. Its specialty is GCP VM cost
+optimization.
 
-## Step 2: Analyze VM Usage Patterns
+## Step 2: See What Kafeju Can Do
 
-1. Click the **AI Assistant** icon (sparkle icon in the top nav bar)
-2. Type this prompt:
+Ask the Kafeju agent these questions and observe the results:
 
-   > **Show me the VM usage patterns — which teams and VM types have the highest resource drift?**
+> **"Which teams are wasting the most money on idle VMs?"**
 
-3. The AI Assistant will invoke the `analyze_vm_usage_patterns` tool
-4. Review the results table
+Watch the tool invocation — you should see it call
+`kafeju.analyze_vm_usage_patterns` or similar.
 
-**Questions to answer:**
-- Which team + VM type combination has the **highest** combined drift score?
-- What does a high `avg_cpu_drift` with a low `avg_cpu_used` tell you?
+> **"Detect any resource anomalies across our VMs."**
 
-## Step 3: Compare Team Efficiency
+This should invoke `kafeju.detect_resource_anomalies`.
 
-In the AI Assistant, type:
+## Step 3: Find the Gap
 
-> **Compare what each team has allocated versus what they actually use. Rank by efficiency.**
+Now ask a question that seems reasonable but Kafeju cannot answer well:
 
-This invokes `compare_team_request_vs_usage`. Look at:
-- The `efficiency_score` column (lower = more waste)
-- The `total_cost` column
+> **"Which GCP region is cheapest for n2-standard-8 instances?"**
 
-**Question:** Which team has the lowest efficiency score, and what does that mean?
+And:
 
-## Step 4: Deep Dive — VM Sizing Analysis
+> **"Find zombie VMs — which expensive instances are sitting idle?"**
 
-Ask the AI Assistant:
+Notice: Kafeju struggles with these. It may hallucinate, give a generic
+answer, or say it doesn't have the right data. These are real questions
+that the existing tools don't cover.
 
-> **Show me the VM sizing analysis — where are the biggest rightsizing opportunities?**
+**Key insight:** The agent's capability is limited by its tools. No tool
+for regional pricing? The agent can't answer regional questions. No tool
+for zombie detection? The agent guesses instead of querying data.
 
-This invokes `get_vm_sizing_analysis`. Compare:
-- `p95_cpu` (actual peak usage) vs the VM type's total cores
-- `combined_drift` (waste percentage)
+## Step 4: Understand the Architecture
 
-## Step 5: Explore the Dashboard
+Open the **Terminal** tab and run:
 
-1. Go to **Dashboards** (hamburger menu > Analytics > Dashboards)
-2. Open **GCP Resource Drift Overview**
-3. Correlate what you found via Agent Builder with the visual panels:
-   - The **Drift by Team** bar chart
-   - The **CPU Heatmap** by machine type
-   - The **Top Over-Provisioned VMs** table
+```bash
+curl -s -u elastic:workshopAdmin1! \
+  http://localhost:5601/api/agent_builder/agents \
+  -H "kbn-xsrf: true" | python3 -c "
+import json, sys
+agents = json.load(sys.stdin)['results']
+for a in agents:
+    if a['id'] == 'kafuju':
+        print(f\"Agent: {a['name']}\")
+        print(f\"Tools: {len(a['configuration']['tools'][0]['tool_ids'])}\")
+        for tid in a['configuration']['tools'][0]['tool_ids']:
+            print(f'  - {tid}')
+"
+```
+
+Count the tools. Note which ones start with `kafeju.` (custom) vs
+`platform.core.` (built-in). The custom tools are ES|QL queries that
+you will learn to build in the next challenges.
 
 ## Check Your Work
 
-Before clicking **Check**, make sure you can answer:
-
-> **Which team runs the most over-provisioned VMs?** (Hint: look for a team
-> running 32-core VMs at single-digit CPU utilization)
+Before clicking **Check**, confirm you:
+- Successfully logged into Kibana
+- Asked Kafeju at least one working question and one failing question
+- Can explain why some questions fail (missing tools)

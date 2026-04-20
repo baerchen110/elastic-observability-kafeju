@@ -1,29 +1,39 @@
-slug: elastic-agent-builder-gcp-drift
-version: 0.1.0
+slug: elastic-agent-builder-workshop-2
+version: 0.2.0
 type: track
-title: "GCP Resource Drift Detection with Elastic Agent Builder"
-teaser: "Use Elastic Agent Builder to detect resource drift, ML anomalies, and build custom tools for GCP infrastructure optimization."
+title: "Build Your Own AI Agent — From Consumer to Creator"
+teaser: "Go beyond using AI agents — build your own tools, wire them into a custom agent, and see them answer questions they couldn't before."
 description: |
-  In this hands-on workshop you will use Elastic's AI Assistant and Agent Builder
-  to analyze GCP VM resource utilization, detect drift between allocated and
-  actual usage, investigate ML-powered anomalies, and build your own custom
-  ES|QL-powered tools.
+  This is **Workshop 2** in the Elastic AI Assistant series.
+
+  In Workshop 1, you used the Observability AI Assistant to investigate
+  OpenTelemetry issues with built-in tools. In this workshop, you become
+  the builder — creating custom ES|QL-powered tools and extending a
+  real agent's capabilities.
 
   **What you will learn:**
-  - How to invoke Agent Builder tools with natural language prompts
-  - How to detect and quantify resource drift across teams and VM types
-  - How ML anomaly detection surfaces zombie VMs and capacity risks
-  - How to create your own Agent Builder tool from an ES|QL query
+  - How Agent Builder tools work (ID + description + ES|QL query)
+  - How to dissect and understand existing tools
+  - How to build a custom tool from scratch and register it via API
+  - How to wire tools into a custom agent
+  - How multi-tool chaining enables compound analysis
 
-  **Prerequisites:** Basic familiarity with Elasticsearch and GCP VM concepts.
+  **What you will build:**
+  - A "Zombie VM Detector" tool (guided)
+  - A second tool of your choice (self-designed)
+  - Both wired into the Kafeju cost-optimization agent
+
+  **Prerequisites:** Completed Workshop 1 (Observability AI Assistant)
+  or equivalent familiarity with the Elastic AI Assistant.
 icon: https://static-www.elastic.co/v3/assets/bltefdd0b53724fa2ce/blt36f2da8d650732a0/5d0823c3d8ff351753cbf2c5/logo-elastic-mark.svg
 level: intermediate
 tags:
   - elastic
   - agent-builder
   - gcp
-  - machine-learning
-  - resource-optimization
+  - custom-tools
+  - es-ql
+  - workshop-2
 owner: elastic
 developers:
   - workshop@elastic.co

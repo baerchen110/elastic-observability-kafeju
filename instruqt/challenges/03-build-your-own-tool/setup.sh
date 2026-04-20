@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
-# No additional setup needed for this challenge.
-# The participant creates the tool themselves.
-exit 0
+set -euo pipefail
+
+echo "No additional setup needed for Challenge 3."
+echo "Participant builds on the existing environment from Challenges 1-2."
