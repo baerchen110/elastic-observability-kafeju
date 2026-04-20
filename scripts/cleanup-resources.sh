@@ -33,7 +33,7 @@ AUTH="$USERNAME:$PASSWORD"
 LOG_DIR="$REPO_ROOT/logs"
 mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/cleanup-$(date +%Y%m%d-%H%M%S).log"
-exec > >(tee -a "$LOG_FILE") 2>&1
+exec > >(stdbuf -oL tee -a "$LOG_FILE") 2>&1
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
 ts()    { date +"%H:%M:%S"; }

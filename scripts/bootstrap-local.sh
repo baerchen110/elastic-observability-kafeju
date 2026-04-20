@@ -17,7 +17,7 @@ ES_AUTH="elastic:$ES_PASSWORD"
 LOG_DIR="$REPO_ROOT/logs"
 mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/bootstrap-$(date +%Y%m%d-%H%M%S).log"
-exec > >(tee -a "$LOG_FILE") 2>&1
+exec > >(stdbuf -oL tee -a "$LOG_FILE") 2>&1
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
 ts()    { date +"%H:%M:%S"; }
@@ -135,59 +135,64 @@ done
 info "Indices: $IDX_CREATED created, $IDX_SKIPPED skipped, $IDX_FAILED failed"
 
 # ── 5. Bulk-load seed data (chunked to stay under body size limits) ───
-CHUNK_LINES=500  # 250 docs per chunk (action + doc = 2 lines each)
-info "Loading seed data (chunk size: $((CHUNK_LINES / 2)) docs)..."
+CHUNK_DOCS=200
+CHUNK_LINES=$((CHUNK_DOCS * 2))
+info "Loading seed data (${CHUNK_DOCS} docs per request)..."
 TOTAL_LOADED=0; TOTAL_ERRORS=0
 BULK_RESP=$(mktemp)
-CHUNK_FILE=$(mktemp)
+CHUNK_DIR=$(mktemp -d)
 for data_file in "$RESOURCES/elasticsearch/seed-data"/*.ndjson; do
   idx=$(basename "$data_file" .ndjson)
   DOC_COUNT=$(( $(wc -l < "$data_file" | tr -d ' ') / 2 ))
   IDX_LOADED=0; IDX_ERRORS=0
 
-  TOTAL_LINES=$(wc -l < "$data_file" | tr -d ' ')
-  OFFSET=0
-  while [ "$OFFSET" -lt "$TOTAL_LINES" ]; do
-    tail -n +"$((OFFSET + 1))" "$data_file" | head -n "$CHUNK_LINES" > "$CHUNK_FILE"
-    LINES_IN_CHUNK=$(wc -l < "$CHUNK_FILE" | tr -d ' ')
-    [ "$LINES_IN_CHUNK" -eq 0 ] && break
-    DOCS_IN_CHUNK=$((LINES_IN_CHUNK / 2))
+  split -l "$CHUNK_LINES" -a 4 "$data_file" "$CHUNK_DIR/chunk_"
+  CHUNKS=("$CHUNK_DIR"/chunk_*)
+  NUM_CHUNKS=${#CHUNKS[@]}
+  CHUNK_I=0
+
+  for chunk in "${CHUNKS[@]}"; do
+    CHUNK_I=$((CHUNK_I + 1))
+    DOCS_IN_CHUNK=$(( $(wc -l < "$chunk" | tr -d ' ') / 2 ))
 
     HTTP_CODE=$(curl -s -o "$BULK_RESP" -w "%{http_code}" --max-time 120 \
       -X POST -u "$ES_AUTH" "$ES_URL/_bulk" \
       -H "Content-Type: application/x-ndjson" \
-      --data-binary "@$CHUNK_FILE")
+      --data-binary "@$chunk")
 
     if [ "$HTTP_CODE" != "200" ]; then
-      warn "$idx chunk@$OFFSET: HTTP $HTTP_CODE ($(head -c 200 "$BULK_RESP"))"
+      warn "$idx [$CHUNK_I/$NUM_CHUNKS]: HTTP $HTTP_CODE ($(head -c 150 "$BULK_RESP"))"
       IDX_ERRORS=$((IDX_ERRORS + DOCS_IN_CHUNK))
     else
-      ERR_N=$(python3 -c "
+      CHUNK_ERRS=$(python3 -c "
 import json
 with open('$BULK_RESP') as f: d = json.load(f)
 errs = [i for i in d.get('items',[]) if 'error' in i.get('index',i.get('create',{}))]
 print(len(errs))
-for e in errs[:2]:
-    op = e.get('index', e.get('create',{}))
-    print(f'  {op.get(\"_index\",\"?\")}: {op.get(\"error\",{}).get(\"reason\",\"?\")[:80]}')
 " 2>/dev/null || echo "0")
-      CHUNK_ERRS=$(echo "$ERR_N" | head -1)
       IDX_LOADED=$((IDX_LOADED + DOCS_IN_CHUNK - CHUNK_ERRS))
       IDX_ERRORS=$((IDX_ERRORS + CHUNK_ERRS))
-      [ "$CHUNK_ERRS" -gt 0 ] && echo "$ERR_N" | tail -n +2 | sed 's/^/    /'
     fi
-    OFFSET=$((OFFSET + CHUNK_LINES))
-  done
 
+    if [ "$NUM_CHUNKS" -gt 1 ]; then
+      echo -ne "  $idx: chunk $CHUNK_I/$NUM_CHUNKS ($IDX_LOADED docs so far)\r"
+    fi
+  done
+  rm -f "$CHUNK_DIR"/chunk_*
+
+  if [ "$NUM_CHUNKS" -gt 1 ]; then
+    echo -ne "\033[2K"
+  fi
   if [ "$IDX_ERRORS" -eq 0 ]; then
-    echo "  $idx: $DOC_COUNT docs"
+    echo "  $idx: $DOC_COUNT docs OK"
   else
     warn "$idx: $IDX_LOADED/$DOC_COUNT docs loaded, $IDX_ERRORS errors"
   fi
   TOTAL_LOADED=$((TOTAL_LOADED + IDX_LOADED))
   TOTAL_ERRORS=$((TOTAL_ERRORS + IDX_ERRORS))
 done
-rm -f "$BULK_RESP" "$CHUNK_FILE"
+rm -f "$BULK_RESP"
+rm -rf "$CHUNK_DIR"
 info "Loaded $TOTAL_LOADED total documents ($TOTAL_ERRORS errors)"
 
 curl -s --max-time 30 -X POST -u "$ES_AUTH" "$ES_URL/_refresh" >/dev/null
