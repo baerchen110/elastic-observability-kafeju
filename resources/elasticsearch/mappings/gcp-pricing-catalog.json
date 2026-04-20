@@ -1,0 +1,79 @@
+{
+  "properties": {
+    "cost_per_core_hour": {
+      "type": "float"
+    },
+    "cost_per_gb_hour": {
+      "type": "float"
+    },
+    "cost_per_hour_usd": {
+      "type": "float"
+    },
+    "cost_per_month_usd": {
+      "type": "float"
+    },
+    "cpu_cores": {
+      "type": "long"
+    },
+    "data_source": {
+      "type": "text",
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "ignore_above": 256
+        }
+      }
+    },
+    "description": {
+      "type": "text",
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "ignore_above": 256
+        }
+      }
+    },
+    "last_updated": {
+      "type": "date"
+    },
+    "machine_family": {
+      "type": "text",
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "ignore_above": 256
+        }
+      }
+    },
+    "machine_type": {
+      "type": "text",
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "ignore_above": 256
+        }
+      }
+    },
+    "memory_gb": {
+      "type": "long"
+    },
+    "region": {
+      "type": "text",
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "ignore_above": 256
+        }
+      }
+    },
+    "use_case": {
+      "type": "text",
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "ignore_above": 256
+        }
+      }
+    }
+  }
+}

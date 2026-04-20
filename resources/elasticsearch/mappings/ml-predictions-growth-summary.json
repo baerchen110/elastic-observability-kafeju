@@ -1,0 +1,79 @@
+{
+  "properties": {
+    "@timestamp": {
+      "type": "date"
+    },
+    "confidence": {
+      "type": "text",
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "ignore_above": 256
+        }
+      }
+    },
+    "current_cores_used": {
+      "type": "float"
+    },
+    "current_vm_capacity": {
+      "type": "long"
+    },
+    "growth_rate_percent_per_month": {
+      "type": "float"
+    },
+    "growth_rate_percent_per_week": {
+      "type": "float"
+    },
+    "note": {
+      "type": "text",
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "ignore_above": 256
+        }
+      }
+    },
+    "prediction_type": {
+      "type": "text",
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "ignore_above": 256
+        }
+      }
+    },
+    "r_squared": {
+      "type": "float"
+    },
+    "recommendation": {
+      "type": "text",
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "ignore_above": 256
+        }
+      }
+    },
+    "team": {
+      "type": "text",
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "ignore_above": 256
+        }
+      }
+    },
+    "weeks_until_90_percent_capacity": {
+      "type": "long"
+    },
+    "workload_type": {
+      "type": "text",
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "ignore_above": 256
+        }
+      }
+    }
+  }
+}

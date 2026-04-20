@@ -1,0 +1,282 @@
+[
+  {
+    "id": "kafeju-dv-instance-lifecycle-synth",
+    "title": "gcp-instance-lifecycle-synthetic",
+    "name": "GCP Instance Lifecycle (Synthetic)",
+    "timeFieldName": "@timestamp",
+    "sourceFilters": [],
+    "fieldFormats": {},
+    "runtimeFieldMap": {},
+    "allowNoIndex": false
+  },
+  {
+    "id": "kafeju-dv-instance-inventory",
+    "title": "gcp-instance-inventory-2025.11.07",
+    "name": "GCP Instance Inventory",
+    "timeFieldName": "@timestamp",
+    "sourceFilters": [],
+    "fieldFormats": {},
+    "runtimeFieldMap": {},
+    "allowNoIndex": false
+  },
+  {
+    "id": "kafeju-dv-requested-resources",
+    "title": "gcp-requested-resources",
+    "name": "GCP Requested Resources",
+    "timeFieldName": "metadata.created_at",
+    "sourceFilters": [],
+    "fieldFormats": {},
+    "runtimeFieldMap": {},
+    "allowNoIndex": false
+  },
+  {
+    "id": "kafeju-dv-instance-lifecycle",
+    "title": "gcp-instance-lifecycle",
+    "name": "GCP Instance Lifecycle",
+    "timeFieldName": "@timestamp",
+    "sourceFilters": [],
+    "fieldFormats": {},
+    "runtimeFieldMap": {},
+    "allowNoIndex": false
+  },
+  {
+    "id": "kafeju-dv-pricing-catalog",
+    "title": "gcp-pricing-catalog",
+    "name": "GCP Pricing Catalog",
+    "timeFieldName": "last_updated",
+    "sourceFilters": [],
+    "fieldFormats": {},
+    "runtimeFieldMap": {},
+    "allowNoIndex": false
+  },
+  {
+    "id": "kafeju-dv-billing-actual",
+    "title": "gcp-billing-actual",
+    "name": "GCP Billing Actual",
+    "timeFieldName": "@timestamp",
+    "sourceFilters": [],
+    "fieldFormats": {},
+    "runtimeFieldMap": {},
+    "allowNoIndex": false
+  },
+  {
+    "id": "kafeju-dv-resource-executions-synth",
+    "title": "gcp-resource-executions-synthetic",
+    "name": "GCP Resource Executions (Synthetic)",
+    "timeFieldName": "execution_time.started_at",
+    "sourceFilters": [],
+    "fieldFormats": {},
+    "runtimeFieldMap": {},
+    "allowNoIndex": false
+  },
+  {
+    "id": "kafeju-dv-resource-executions",
+    "title": "gcp-resource-executions-2025.11",
+    "name": "GCP Resource Executions",
+    "timeFieldName": "execution_time.started_at",
+    "sourceFilters": [],
+    "fieldFormats": {},
+    "runtimeFieldMap": {},
+    "allowNoIndex": false
+  },
+  {
+    "id": "kafeju-dv-workload-requirements",
+    "title": "gcp-workload-requirements",
+    "name": "GCP Workload Requirements",
+    "timeFieldName": "schedule.next_run",
+    "sourceFilters": [],
+    "fieldFormats": {},
+    "runtimeFieldMap": {},
+    "allowNoIndex": false
+  },
+  {
+    "id": "kafeju-dv-anomalies-synth",
+    "title": "ml-predictions-anomalies-synthetic",
+    "name": "ML Anomalies (Synthetic)",
+    "timeFieldName": "@timestamp",
+    "sourceFilters": [],
+    "fieldFormats": {},
+    "runtimeFieldMap": {},
+    "allowNoIndex": false
+  },
+  {
+    "id": "kafeju-dv-growth-summary",
+    "title": "ml-predictions-growth-summary",
+    "name": "ML Growth Summary",
+    "timeFieldName": "@timestamp",
+    "sourceFilters": [],
+    "fieldFormats": {},
+    "runtimeFieldMap": {},
+    "allowNoIndex": false
+  },
+  {
+    "id": "kafeju-dv-cost-forecast",
+    "title": "ml-predictions-cost-forecast",
+    "name": "ML Cost Forecast",
+    "timeFieldName": "@timestamp",
+    "sourceFilters": [],
+    "fieldFormats": {},
+    "runtimeFieldMap": {},
+    "allowNoIndex": false
+  },
+  {
+    "id": "kafeju-dv-growth",
+    "title": "ml-predictions-growth",
+    "name": "ML Growth Predictions",
+    "timeFieldName": "@timestamp",
+    "sourceFilters": [],
+    "fieldFormats": {},
+    "runtimeFieldMap": {},
+    "allowNoIndex": false
+  },
+  {
+    "id": "kafeju-dv-anomalies",
+    "title": "ml-predictions-anomalies",
+    "name": "ML Anomalies",
+    "timeFieldName": "@timestamp",
+    "sourceFilters": [],
+    "fieldFormats": {},
+    "runtimeFieldMap": {},
+    "allowNoIndex": false
+  },
+  {
+    "id": "kafeju-dv-vm-pricing",
+    "title": "gcp-vm-pricing",
+    "name": "GCP VM Pricing",
+    "timeFieldName": "@timestamp",
+    "sourceFilters": [],
+    "fieldFormats": {},
+    "runtimeFieldMap": {},
+    "allowNoIndex": false
+  },
+  {
+    "id": "kafeju-dv-all-executions",
+    "title": "gcp-resource-executions-*",
+    "name": "GCP Resource Executions (All)",
+    "timeFieldName": "execution_time.started_at",
+    "sourceFilters": [],
+    "fieldFormats": {},
+    "runtimeFieldMap": {},
+    "allowNoIndex": false
+  },
+  {
+    "id": "kafeju-dv-all-lifecycle",
+    "title": "gcp-instance-lifecycle*",
+    "name": "GCP Instance Lifecycle (All)",
+    "timeFieldName": "@timestamp",
+    "sourceFilters": [],
+    "fieldFormats": {},
+    "runtimeFieldMap": {},
+    "allowNoIndex": false
+  },
+  {
+    "id": "kafeju-dv-all-anomalies",
+    "title": "ml-predictions-anomalies*",
+    "name": "ML Anomalies (All)",
+    "timeFieldName": "@timestamp",
+    "sourceFilters": [],
+    "fieldFormats": {},
+    "runtimeFieldMap": {},
+    "allowNoIndex": false
+  },
+  {
+    "id": "kafeju-dv-all-growth",
+    "title": "ml-predictions-growth*",
+    "name": "ML Growth (All)",
+    "timeFieldName": "@timestamp",
+    "sourceFilters": [],
+    "fieldFormats": {},
+    "runtimeFieldMap": {},
+    "allowNoIndex": false
+  },
+  {
+    "id": "kafeju-dv-all-ml",
+    "title": "ml-predictions-*",
+    "name": "All ML Predictions",
+    "timeFieldName": "@timestamp",
+    "sourceFilters": [],
+    "fieldFormats": {},
+    "runtimeFieldMap": {},
+    "allowNoIndex": false
+  },
+  {
+    "id": "kafeju-dv-all-gcp",
+    "title": "gcp-*",
+    "name": "All GCP Data",
+    "timeFieldName": "@timestamp",
+    "sourceFilters": [],
+    "fieldFormats": {},
+    "runtimeFieldMap": {},
+    "allowNoIndex": false
+  },
+  {
+    "id": "kafeju-idx-executions",
+    "title": "gcp-resource-executions-*",
+    "name": "gcp-resource-executions-*",
+    "timeFieldName": "execution_time.started_at",
+    "sourceFilters": [],
+    "fieldFormats": {},
+    "runtimeFieldMap": {},
+    "allowNoIndex": false
+  },
+  {
+    "id": "kafeju-idx-lifecycle",
+    "title": "gcp-instance-lifecycle*",
+    "name": "gcp-instance-lifecycle*",
+    "timeFieldName": "@timestamp",
+    "sourceFilters": [],
+    "fieldFormats": {},
+    "runtimeFieldMap": {},
+    "allowNoIndex": false
+  },
+  {
+    "id": "kafeju-idx-cost-forecast",
+    "title": "ml-predictions-cost-forecast",
+    "name": "ml-predictions-cost-forecast",
+    "timeFieldName": "@timestamp",
+    "sourceFilters": [],
+    "fieldFormats": {},
+    "runtimeFieldMap": {},
+    "allowNoIndex": false
+  },
+  {
+    "id": "kafeju-idx-billing",
+    "title": "gcp-billing-actual",
+    "name": "gcp-billing-actual",
+    "timeFieldName": "@timestamp",
+    "sourceFilters": [],
+    "fieldFormats": {},
+    "runtimeFieldMap": {},
+    "allowNoIndex": false
+  },
+  {
+    "id": "kafeju-idx-pricing",
+    "title": "gcp-vm-pricing",
+    "name": "gcp-vm-pricing",
+    "timeFieldName": "@timestamp",
+    "sourceFilters": [],
+    "fieldFormats": {},
+    "runtimeFieldMap": {},
+    "allowNoIndex": false
+  },
+  {
+    "id": "kafeju-idx-anomalies",
+    "title": "ml-predictions-anomalies*",
+    "name": "ml-predictions-anomalies*",
+    "timeFieldName": "@timestamp",
+    "sourceFilters": [],
+    "fieldFormats": {},
+    "runtimeFieldMap": {},
+    "allowNoIndex": false
+  },
+  {
+    "id": "kafeju-idx-growth",
+    "title": "ml-predictions-growth*",
+    "name": "ml-predictions-growth*",
+    "timeFieldName": "@timestamp",
+    "sourceFilters": [],
+    "fieldFormats": {},
+    "runtimeFieldMap": {},
+    "allowNoIndex": false
+  }
+]

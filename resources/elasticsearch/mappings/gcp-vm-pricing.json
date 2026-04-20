@@ -1,0 +1,75 @@
+{
+  "properties": {
+    "@timestamp": {
+      "type": "date"
+    },
+    "cloud": {
+      "properties": {
+        "provider": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "region": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        }
+      }
+    },
+    "last_updated": {
+      "type": "date"
+    },
+    "machine_series": {
+      "type": "text",
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "ignore_above": 256
+        }
+      }
+    },
+    "machine_type": {
+      "type": "text",
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "ignore_above": 256
+        }
+      }
+    },
+    "pricing": {
+      "properties": {
+        "cpu_cores": {
+          "type": "long"
+        },
+        "currency": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "memory_gb": {
+          "type": "long"
+        },
+        "price_per_hour_usd": {
+          "type": "float"
+        },
+        "price_per_month_usd": {
+          "type": "float"
+        }
+      }
+    }
+  }
+}

@@ -4,3 +4,6 @@
 node_modules/
 __pycache__/
 *.pyc
+resources/docker/.env
+*.tmp
+*.bak

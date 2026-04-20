@@ -1,0 +1,399 @@
+[
+  {
+    "job": {
+      "job_id": "resource-usage-anomalies",
+      "datafeed_config": {
+        "datafeed_id": "datafeed-resource-usage-anomalies",
+        "job_id": "resource-usage-anomalies",
+        "chunking_config": {
+          "mode": "auto"
+        },
+        "indices_options": {
+          "ignore_unavailable": false,
+          "expand_wildcards": [
+            "open"
+          ],
+          "allow_no_indices": true,
+          "ignore_throttled": true
+        },
+        "query": {
+          "match_all": {}
+        },
+        "indices": [
+          "gcp-resource-executions-*"
+        ],
+        "scroll_size": 1000,
+        "delayed_data_check_config": {
+          "enabled": true
+        }
+      },
+      "description": "Detect abnormal resource usage patterns",
+      "analysis_config": {
+        "bucket_span": "15m",
+        "detectors": [
+          {
+            "detector_description": "High CPU usage",
+            "function": "high_mean",
+            "field_name": "resource_usage.cpu.avg_percent",
+            "partition_field_name": "vm_info.vm_id",
+            "detector_index": 0
+          },
+          {
+            "detector_description": "High memory usage",
+            "function": "high_mean",
+            "field_name": "resource_usage.memory.avg_percent",
+            "partition_field_name": "vm_info.vm_id",
+            "detector_index": 1
+          }
+        ],
+        "influencers": [
+          "metadata.team",
+          "metadata.workload_type"
+        ],
+        "model_prune_window": "30d"
+      },
+      "analysis_limits": {
+        "model_memory_limit": "256mb",
+        "categorization_examples_limit": 4
+      },
+      "data_description": {
+        "time_field": "execution_time.started_at",
+        "time_format": "epoch_ms"
+      },
+      "model_plot_config": {
+        "enabled": true,
+        "annotations_enabled": true
+      },
+      "model_snapshot_retention_days": 10,
+      "daily_model_snapshot_retention_after_days": 1,
+      "results_index_name": "shared",
+      "allow_lazy_open": true
+    },
+    "datafeed": {
+      "datafeed_id": "datafeed-resource-usage-anomalies",
+      "job_id": "resource-usage-anomalies",
+      "chunking_config": {
+        "mode": "auto"
+      },
+      "indices_options": {
+        "ignore_unavailable": false,
+        "expand_wildcards": [
+          "open"
+        ],
+        "allow_no_indices": true,
+        "ignore_throttled": true
+      },
+      "query": {
+        "match_all": {}
+      },
+      "indices": [
+        "gcp-resource-executions-*"
+      ],
+      "scroll_size": 1000,
+      "delayed_data_check_config": {
+        "enabled": true
+      }
+    }
+  },
+  {
+    "job": {
+      "job_id": "team-cost-forecast",
+      "datafeed_config": {
+        "datafeed_id": "datafeed-team-cost-forecast",
+        "job_id": "team-cost-forecast",
+        "chunking_config": {
+          "mode": "auto"
+        },
+        "indices_options": {
+          "ignore_unavailable": false,
+          "expand_wildcards": [
+            "open"
+          ],
+          "allow_no_indices": true,
+          "ignore_throttled": true
+        },
+        "query": {
+          "match_all": {}
+        },
+        "indices": [
+          "gcp-resource-executions-*"
+        ],
+        "scroll_size": 1000,
+        "delayed_data_check_config": {
+          "enabled": true
+        }
+      },
+      "description": "Forecast team VM costs over time",
+      "analysis_config": {
+        "bucket_span": "1d",
+        "detectors": [
+          {
+            "detector_description": "sum(cost_actual.total_cost_usd) partitionfield=metadata.team",
+            "function": "sum",
+            "field_name": "cost_actual.total_cost_usd",
+            "partition_field_name": "metadata.team",
+            "detector_index": 0
+          }
+        ],
+        "influencers": [
+          "metadata.team",
+          "metadata.workload_type"
+        ],
+        "model_prune_window": "30d"
+      },
+      "analysis_limits": {
+        "model_memory_limit": "256mb",
+        "categorization_examples_limit": 4
+      },
+      "data_description": {
+        "time_field": "execution_time.started_at",
+        "time_format": "epoch_ms"
+      },
+      "model_plot_config": {
+        "enabled": true,
+        "terms": "metadata.team",
+        "annotations_enabled": true
+      },
+      "model_snapshot_retention_days": 10,
+      "daily_model_snapshot_retention_after_days": 1,
+      "results_index_name": "shared",
+      "allow_lazy_open": true
+    },
+    "datafeed": {
+      "datafeed_id": "datafeed-team-cost-forecast",
+      "job_id": "team-cost-forecast",
+      "chunking_config": {
+        "mode": "auto"
+      },
+      "indices_options": {
+        "ignore_unavailable": false,
+        "expand_wildcards": [
+          "open"
+        ],
+        "allow_no_indices": true,
+        "ignore_throttled": true
+      },
+      "query": {
+        "match_all": {}
+      },
+      "indices": [
+        "gcp-resource-executions-*"
+      ],
+      "scroll_size": 1000,
+      "delayed_data_check_config": {
+        "enabled": true
+      }
+    }
+  },
+  {
+    "job": {
+      "job_id": "vm-capacity-planning",
+      "datafeed_config": {
+        "datafeed_id": "datafeed-vm-capacity-planning",
+        "job_id": "vm-capacity-planning",
+        "chunking_config": {
+          "mode": "auto"
+        },
+        "indices_options": {
+          "ignore_unavailable": false,
+          "expand_wildcards": [
+            "open"
+          ],
+          "allow_no_indices": true,
+          "ignore_throttled": true
+        },
+        "query": {
+          "bool": {
+            "must": [
+              {
+                "exists": {
+                  "field": "resource_usage.cpu.avg_percent"
+                }
+              },
+              {
+                "exists": {
+                  "field": "vm_info.vm_id"
+                }
+              }
+            ]
+          }
+        },
+        "indices": [
+          "gcp-resource-executions-*"
+        ],
+        "scroll_size": 1000,
+        "delayed_data_check_config": {
+          "enabled": true
+        }
+      },
+      "description": "VM capacity planning - detect CPU and memory usage anomalies",
+      "analysis_config": {
+        "bucket_span": "15m",
+        "detectors": [
+          {
+            "detector_description": "Mean CPU utilization per VM",
+            "function": "mean",
+            "field_name": "resource_usage.cpu.avg_percent",
+            "partition_field_name": "vm_info.vm_id",
+            "detector_index": 0
+          },
+          {
+            "detector_description": "Mean memory utilization per VM",
+            "function": "mean",
+            "field_name": "resource_usage.memory.avg_percent",
+            "partition_field_name": "vm_info.vm_id",
+            "detector_index": 1
+          }
+        ],
+        "influencers": [
+          "vm_info.vm_id",
+          "metadata.team"
+        ],
+        "model_prune_window": "30d"
+      },
+      "analysis_limits": {
+        "model_memory_limit": "256mb",
+        "categorization_examples_limit": 4
+      },
+      "data_description": {
+        "time_field": "execution_time.started_at",
+        "time_format": "epoch_ms"
+      },
+      "model_plot_config": {
+        "enabled": true,
+        "annotations_enabled": true
+      },
+      "model_snapshot_retention_days": 10,
+      "daily_model_snapshot_retention_after_days": 1,
+      "results_index_name": "shared",
+      "allow_lazy_open": true
+    },
+    "datafeed": {
+      "datafeed_id": "datafeed-vm-capacity-planning",
+      "job_id": "vm-capacity-planning",
+      "chunking_config": {
+        "mode": "auto"
+      },
+      "indices_options": {
+        "ignore_unavailable": false,
+        "expand_wildcards": [
+          "open"
+        ],
+        "allow_no_indices": true,
+        "ignore_throttled": true
+      },
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "exists": {
+                "field": "resource_usage.cpu.avg_percent"
+              }
+            },
+            {
+              "exists": {
+                "field": "vm_info.vm_id"
+              }
+            }
+          ]
+        }
+      },
+      "indices": [
+        "gcp-resource-executions-*"
+      ],
+      "scroll_size": 1000,
+      "delayed_data_check_config": {
+        "enabled": true
+      }
+    }
+  },
+  {
+    "job": {
+      "job_id": "workload-growth-rate",
+      "datafeed_config": {
+        "datafeed_id": "datafeed-workload-growth-rate",
+        "job_id": "workload-growth-rate",
+        "chunking_config": {
+          "mode": "auto"
+        },
+        "indices_options": {
+          "ignore_unavailable": false,
+          "expand_wildcards": [
+            "open"
+          ],
+          "allow_no_indices": true,
+          "ignore_throttled": true
+        },
+        "query": {
+          "match_all": {}
+        },
+        "indices": [
+          "gcp-resource-executions-*"
+        ],
+        "scroll_size": 1000,
+        "delayed_data_check_config": {
+          "enabled": true
+        }
+      },
+      "description": "Predict workload growth rates",
+      "analysis_config": {
+        "bucket_span": "1d",
+        "detectors": [
+          {
+            "detector_description": "Average cores used by team",
+            "function": "mean",
+            "field_name": "resource_usage.cpu.avg_cores_used",
+            "partition_field_name": "metadata.team",
+            "detector_index": 0
+          }
+        ],
+        "influencers": [
+          "metadata.team",
+          "metadata.workload_type"
+        ],
+        "model_prune_window": "30d"
+      },
+      "analysis_limits": {
+        "model_memory_limit": "256mb",
+        "categorization_examples_limit": 4
+      },
+      "data_description": {
+        "time_field": "execution_time.started_at",
+        "time_format": "epoch_ms"
+      },
+      "model_plot_config": {
+        "enabled": true,
+        "annotations_enabled": true
+      },
+      "model_snapshot_retention_days": 10,
+      "daily_model_snapshot_retention_after_days": 1,
+      "results_index_name": "shared",
+      "allow_lazy_open": true
+    },
+    "datafeed": {
+      "datafeed_id": "datafeed-workload-growth-rate",
+      "job_id": "workload-growth-rate",
+      "chunking_config": {
+        "mode": "auto"
+      },
+      "indices_options": {
+        "ignore_unavailable": false,
+        "expand_wildcards": [
+          "open"
+        ],
+        "allow_no_indices": true,
+        "ignore_throttled": true
+      },
+      "query": {
+        "match_all": {}
+      },
+      "indices": [
+        "gcp-resource-executions-*"
+      ],
+      "scroll_size": 1000,
+      "delayed_data_check_config": {
+        "enabled": true
+      }
+    }
+  }
+]

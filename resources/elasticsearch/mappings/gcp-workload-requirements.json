@@ -1,0 +1,109 @@
+{
+  "properties": {
+    "requirements": {
+      "properties": {
+        "max_latency_ms": {
+          "type": "long"
+        },
+        "min_cpu_cores": {
+          "type": "long"
+        },
+        "min_memory_gb": {
+          "type": "long"
+        },
+        "preferred_cpu_cores": {
+          "type": "long"
+        },
+        "preferred_memory_gb": {
+          "type": "long"
+        },
+        "sla_completion_minutes": {
+          "type": "long"
+        }
+      }
+    },
+    "resource_id": {
+      "type": "text",
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "ignore_above": 256
+        }
+      }
+    },
+    "resource_profile": {
+      "properties": {
+        "avg_cpu_usage_percent": {
+          "type": "long"
+        },
+        "avg_duration_minutes": {
+          "type": "long"
+        },
+        "avg_memory_usage_percent": {
+          "type": "long"
+        },
+        "p95_cpu_usage_percent": {
+          "type": "long"
+        },
+        "p95_duration_minutes": {
+          "type": "long"
+        },
+        "p95_memory_usage_percent": {
+          "type": "long"
+        }
+      }
+    },
+    "schedule": {
+      "properties": {
+        "expression": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "next_run": {
+          "type": "date"
+        },
+        "timezone": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "type": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        }
+      }
+    },
+    "workload_id": {
+      "type": "text",
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "ignore_above": 256
+        }
+      }
+    },
+    "workload_type": {
+      "type": "text",
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "ignore_above": 256
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,230 @@
+{
+  "properties": {
+    "cost_actual": {
+      "properties": {
+        "compute_cost_usd": {
+          "type": "float"
+        },
+        "total_cost_usd": {
+          "type": "float"
+        }
+      }
+    },
+    "drift_metrics": {
+      "properties": {
+        "combined_drift_score": {
+          "type": "float"
+        },
+        "cpu": {
+          "properties": {
+            "drift_cores": {
+              "type": "float"
+            },
+            "drift_percent": {
+              "type": "long"
+            }
+          }
+        },
+        "memory": {
+          "properties": {
+            "drift_gb": {
+              "type": "float"
+            },
+            "drift_percent": {
+              "type": "long"
+            }
+          }
+        }
+      }
+    },
+    "execution_id": {
+      "type": "text",
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "ignore_above": 256
+        }
+      }
+    },
+    "execution_time": {
+      "properties": {
+        "completed_at": {
+          "type": "date"
+        },
+        "duration_minutes": {
+          "type": "float"
+        },
+        "started_at": {
+          "type": "date"
+        },
+        "status": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        }
+      }
+    },
+    "metadata": {
+      "properties": {
+        "environment": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "priority": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "team": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "workload_type": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        }
+      }
+    },
+    "resource_id": {
+      "type": "text",
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "ignore_above": 256
+        }
+      }
+    },
+    "resource_kind": {
+      "type": "text",
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "ignore_above": 256
+        }
+      }
+    },
+    "resource_name": {
+      "type": "text",
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "ignore_above": 256
+        }
+      }
+    },
+    "resource_usage": {
+      "properties": {
+        "cpu": {
+          "properties": {
+            "avg_cores_used": {
+              "type": "float"
+            },
+            "avg_percent": {
+              "type": "long"
+            },
+            "p95_percent": {
+              "type": "long"
+            },
+            "peak_cores_used": {
+              "type": "float"
+            },
+            "peak_percent": {
+              "type": "long"
+            }
+          }
+        },
+        "memory": {
+          "properties": {
+            "avg_gb_used": {
+              "type": "float"
+            },
+            "avg_percent": {
+              "type": "long"
+            },
+            "p95_percent": {
+              "type": "long"
+            },
+            "peak_gb_used": {
+              "type": "float"
+            },
+            "peak_percent": {
+              "type": "long"
+            }
+          }
+        }
+      }
+    },
+    "resource_version": {
+      "type": "text",
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "ignore_above": 256
+        }
+      }
+    },
+    "vm_info": {
+      "properties": {
+        "vm_id": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "vm_type_actual": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "vm_type_requested": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "zone": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        }
+      }
+    }
+  }
+}

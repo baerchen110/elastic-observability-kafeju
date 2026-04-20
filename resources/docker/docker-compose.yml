@@ -1,0 +1,57 @@
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${ES_VERSION:-9.0.0}
+    container_name: kafeju-es
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=true
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD:-workshopAdmin1!}
+      - xpack.license.self_generated.type=trial
+      - xpack.ml.enabled=true
+      - xpack.ml.max_machine_memory_percent=40
+      - node.roles=master,data,ingest,ml,transform
+      - ES_JAVA_OPTS=-Xms2g -Xmx2g
+      - cluster.name=kafeju-workshop
+      - node.name=kafeju-node
+    ports:
+      - "${ES_PORT:-9200}:9200"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf -u elastic:${ELASTIC_PASSWORD:-workshopAdmin1!} http://localhost:9200/_cluster/health | grep -qE '\"status\":\"(green|yellow)\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:${ES_VERSION:-9.0.0}
+    container_name: kafeju-kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=elastic
+      - ELASTICSEARCH_PASSWORD=${ELASTIC_PASSWORD:-workshopAdmin1!}
+      - SERVER_NAME=kafeju-kibana
+      - SERVER_HOST=0.0.0.0
+      - XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=kafeju-workshop-encryption-key-32chars!!
+      - XPACK_SECURITY_ENCRYPTIONKEY=kafeju-workshop-security-key-32chars!!!
+      - XPACK_REPORTING_ENCRYPTIONKEY=kafeju-workshop-reporting-key-32chars!!
+    ports:
+      - "${KIBANA_PORT:-5601}:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:5601/api/status | grep -q '\"level\":\"available\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 90s
+
+volumes:
+  esdata:
+    driver: local

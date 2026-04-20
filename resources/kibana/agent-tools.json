@@ -1,0 +1,211 @@
+[
+  {
+    "id": "kafeju.calculate_cost_optimization_1",
+    "type": "esql",
+    "description": "Calculates potential cost savings from VM rightsizing by analyzing usage patterns. Identifies instances with high drift (>20%) and recommends optimal sizing based on P95 usage with 20% headroom.",
+    "tags": [
+      "kafeju",
+      "infrastructure",
+      "cost"
+    ],
+    "configuration": {
+      "query": "FROM metrics-gcp.compute-*\n| EVAL \n    cpu_usage_pct = gcp.compute.instance.cpu.utilization.pct * 100,\n    memory_usage_pct = (gcp.compute.instance.memory.balloon.ram_used.value / gcp.compute.instance.memory.balloon.ram_size.value) * 100,\n    cpu_drift = ((gcp.compute.instance.cpu.reserved_cores.value - (gcp.compute.instance.cpu.utilization.pct * gcp.compute.instance.cpu.reserved_cores.value)) / gcp.compute.instance.cpu.reserved_cores.value) * 100,\n    memory_drift = ((gcp.compute.instance.memory.balloon.ram_size.value - gcp.compute.instance.memory.balloon.ram_used.value) / gcp.compute.instance.memory.balloon.ram_size.value) * 100,\n    combined_drift = (cpu_drift + memory_drift) / 2,\n    current_cpu_cores = gcp.compute.instance.cpu.reserved_cores.value,\n    current_memory_gb = gcp.compute.instance.memory.balloon.ram_size.value / 1073741824.0\n| STATS \n    p95_cpu = PERCENTILE(cpu_usage_pct, 95),\n    p95_memory = PERCENTILE(memory_usage_pct, 95),\n    avg_cpu_cores = AVG(current_cpu_cores),\n    avg_memory_gb = AVG(current_memory_gb),\n    avg_drift = AVG(combined_drift)\n    BY cloud.instance.name,\n       cloud.machine.type,\n       cloud.region\n| EVAL \n    needs_optimization = CASE(\n        avg_drift > 40, \"HIGH\",\n        avg_drift > 25, \"MEDIUM\",\n        \"LOW\"\n    ),\n    recommended_cpu_cores = CEIL(avg_cpu_cores * (p95_cpu / 100) * 1.2),\n    recommended_memory_gb = CEIL(avg_memory_gb * (p95_memory / 100) * 1.2)\n| WHERE avg_drift > 20\n| SORT avg_drift DESC\n| LIMIT 10",
+      "params": {}
+    }
+  },
+  {
+    "id": "kafeju.analyze_vm_usage_patterns",
+    "type": "esql",
+    "description": "Analyzes GCP VM resource usage patterns, identifies drift between requested and actual usage, and highlights over-provisioned instances. Returns CPU/memory usage, drift metrics, and efficiency scores.",
+    "tags": [
+      "kafeju",
+      "infrastructure",
+      "vm_usage"
+    ],
+    "configuration": {
+      "query": "FROM metrics-gcp.compute-*\n| EVAL \n    cpu_usage_pct = gcp.compute.instance.cpu.utilization.pct * 100,\n    cpu_cores_requested = gcp.compute.instance.cpu.reserved_cores.value,\n    cpu_drift_pct = ((gcp.compute.instance.cpu.reserved_cores.value - (gcp.compute.instance.cpu.utilization.pct * gcp.compute.instance.cpu.reserved_cores.value)) / gcp.compute.instance.cpu.reserved_cores.value) * 100,\n    memory_size_gb = gcp.compute.instance.memory.balloon.ram_size.value / 1073741824.0,\n    memory_usage_pct = (gcp.compute.instance.memory.balloon.ram_used.value / gcp.compute.instance.memory.balloon.ram_size.value) * 100,\n    memory_drift_pct = ((gcp.compute.instance.memory.balloon.ram_size.value - gcp.compute.instance.memory.balloon.ram_used.value) / gcp.compute.instance.memory.balloon.ram_size.value) * 100,\n    combined_drift = (cpu_drift_pct + memory_drift_pct) / 2\n| STATS \n    avg_cpu_usage = AVG(cpu_usage_pct),\n    p95_cpu_usage = PERCENTILE(cpu_usage_pct, 95),\n    avg_memory_usage = AVG(memory_usage_pct),\n    p95_memory_usage = PERCENTILE(memory_usage_pct, 95),\n    avg_cpu_drift = AVG(cpu_drift_pct),\n    avg_memory_drift = AVG(memory_drift_pct),\n    avg_combined_drift = AVG(combined_drift),\n    avg_cpu_cores = AVG(cpu_cores_requested),\n    avg_memory_gb = AVG(memory_size_gb),\n    sample_count = COUNT(*)\n    BY cloud.instance.name, \n       cloud.instance.id,\n       cloud.machine.type\n| SORT avg_combined_drift DESC\n| LIMIT 20",
+      "params": {}
+    }
+  },
+  {
+    "id": "kafeju.compare_instance_options",
+    "type": "esql",
+    "description": "Compares different GCP VM machine types for cost and performance trade offs. Filters by minimum CPU and memory requirements and calculates efficiency scores.",
+    "tags": [
+      "kafeju",
+      "infrastructure",
+      "vm_usage",
+      "cost"
+    ],
+    "configuration": {
+      "query": "FROM gcp-pricing-catalog\n| WHERE region == \"us-central1\" \n  AND cpu_cores >= 4\n  AND memory_gb >= 16\n| EVAL \n    monthly_cost = cost_per_month_usd,\n    efficiency_score = (cpu_cores + memory_gb) / cost_per_month_usd,\n    cost_per_resource = cost_per_month_usd / (cpu_cores + memory_gb)\n| SORT cost_per_month_usd ASC\n| KEEP machine_type, machine_family, cpu_cores, memory_gb, \n       cost_per_hour_usd, cost_per_month_usd, \n       use_case, description, efficiency_score, cost_per_resource\n| LIMIT 20",
+      "params": {}
+    }
+  },
+  {
+    "id": "kafeju.get_vm_sizing_analysis",
+    "type": "esql",
+    "description": "Analyzes VM sizing efficiency by comparing allocated resources (requested VM size) vs actual usage. Shows which VMs are over-provisioned based on P95 usage patterns. Useful for identifying rightsizing opportunities by team and region.",
+    "tags": [
+      "kafeju",
+      "infrastructure",
+      "vm_usage"
+    ],
+    "configuration": {
+      "query": "FROM metrics-gcp.compute-*\n| WHERE gcp.labels.team IS NOT NULL\n| EVAL\n    cpu_usage_pct = gcp.compute.instance.cpu.utilization.pct * 100,\n    memory_usage_pct = (gcp.compute.instance.memory.balloon.ram_used.value / gcp.compute.instance.memory.balloon.ram_size.value) * 100,\n    cpu_drift_pct = ((gcp.compute.instance.cpu.reserved_cores.value - (gcp.compute.instance.cpu.utilization.pct * gcp.compute.instance.cpu.reserved_cores.value)) / gcp.compute.instance.cpu.reserved_cores.value) * 100,\n    memory_drift_pct = ((gcp.compute.instance.memory.balloon.ram_size.value - gcp.compute.instance.memory.balloon.ram_used.value) / gcp.compute.instance.memory.balloon.ram_size.value) * 100,\n    combined_drift = (cpu_drift_pct + memory_drift_pct) / 2,\n    cpu_cores_used = gcp.compute.instance.cpu.utilization.pct * gcp.compute.instance.cpu.reserved_cores.value,\n    memory_gb_used = gcp.compute.instance.memory.balloon.ram_used.value / 1073741824.0\n| STATS\n    allocated_cpu_cores = AVG(gcp.compute.instance.cpu.reserved_cores.value),\n    allocated_memory_gb = AVG(gcp.compute.instance.memory.balloon.ram_size.value / 1073741824.0),\n    avg_cpu_percent = AVG(cpu_usage_pct),\n    p95_cpu_percent = PERCENTILE(cpu_usage_pct, 95),\n    avg_memory_percent = AVG(memory_usage_pct),\n    p95_memory_percent = PERCENTILE(memory_usage_pct, 95),\n    avg_cpu_cores_used = AVG(cpu_cores_used),\n    p95_cpu_cores_used = PERCENTILE(cpu_cores_used, 95),\n    cpu_drift = AVG(cpu_drift_pct),\n    memory_drift = AVG(memory_drift_pct),\n    combined_drift = AVG(combined_drift),\n    sample_count = COUNT(*)\n    BY cloud.instance.id, cloud.instance.name, cloud.machine.type, gcp.labels.team, cloud.region\n| SORT combined_drift DESC\n| LIMIT 20",
+      "params": {}
+    }
+  },
+  {
+    "id": "kafeju.compare_team_request_vs_usage",
+    "type": "esql",
+    "description": "Compares what teams have ALLOCATED (VM sizes) vs what they ACTUALLY USE (real metrics). Calculates efficiency scores to identify which teams are over-provisioning the most. Lower efficiency score = more waste.\n",
+    "tags": [
+      "kafeju",
+      "infrastructure",
+      "vm_usage"
+    ],
+    "configuration": {
+      "query": "FROM metrics-gcp.compute-*\n| WHERE gcp.labels.team IS NOT NULL\n| EVAL\n    cpu_usage_pct = gcp.compute.instance.cpu.utilization.pct * 100,\n    memory_usage_pct = (gcp.compute.instance.memory.balloon.ram_used.value / gcp.compute.instance.memory.balloon.ram_size.value) * 100,\n    cpu_drift_pct = ((gcp.compute.instance.cpu.reserved_cores.value - (gcp.compute.instance.cpu.utilization.pct * gcp.compute.instance.cpu.reserved_cores.value)) / gcp.compute.instance.cpu.reserved_cores.value) * 100,\n    memory_drift_pct = ((gcp.compute.instance.memory.balloon.ram_size.value - gcp.compute.instance.memory.balloon.ram_used.value) / gcp.compute.instance.memory.balloon.ram_size.value) * 100,\n    combined_drift = (cpu_drift_pct + memory_drift_pct) / 2\n| STATS \n    avg_cpu_used_percent = AVG(cpu_usage_pct),\n    p95_cpu_used_percent = PERCENTILE(cpu_usage_pct, 95),\n    avg_memory_used_percent = AVG(memory_usage_pct),\n    p95_memory_used_percent = PERCENTILE(memory_usage_pct, 95),\n    avg_cpu_drift = AVG(cpu_drift_pct),\n    avg_memory_drift = AVG(memory_drift_pct),\n    avg_combined_drift = AVG(combined_drift),\n    common_vm_types = VALUES(cloud.machine.type),\n    instances = COUNT_DISTINCT(cloud.instance.id)\n    BY gcp.labels.team\n| EVAL\n    efficiency_score = 100 - avg_combined_drift\n| SORT efficiency_score ASC\n| LIMIT 20",
+      "params": {}
+    }
+  },
+  {
+    "id": "kafeju.find_similar_workloads",
+    "type": "esql",
+    "description": "Calculates potential cost savings from VM rightsizing by analyzing usage patterns. Identifies instances with high drift (>20%) and recommends optimal sizing based on P95 usage with 20% headroom.",
+    "tags": [
+      "kafeju",
+      "infrastructure",
+      "cost"
+    ],
+    "configuration": {
+      "query": "FROM metrics-gcp.compute-*\n| WHERE gcp.labels.team IS NOT NULL\n| EVAL \n    cpu_usage_pct = gcp.compute.instance.cpu.utilization.pct * 100,\n    memory_usage_pct = (gcp.compute.instance.memory.balloon.ram_used.value / gcp.compute.instance.memory.balloon.ram_size.value) * 100,\n    cpu_drift = ((gcp.compute.instance.cpu.reserved_cores.value - (gcp.compute.instance.cpu.utilization.pct * gcp.compute.instance.cpu.reserved_cores.value)) / gcp.compute.instance.cpu.reserved_cores.value) * 100,\n    memory_drift = ((gcp.compute.instance.memory.balloon.ram_size.value - gcp.compute.instance.memory.balloon.ram_used.value) / gcp.compute.instance.memory.balloon.ram_size.value) * 100,\n    combined_drift = (cpu_drift + memory_drift) / 2\n| STATS \n    avg_cpu = AVG(cpu_usage_pct),\n    avg_memory = AVG(memory_usage_pct),\n    avg_drift = AVG(combined_drift),\n    instances = COUNT_DISTINCT(cloud.instance.id),\n    avg_cores = AVG(gcp.compute.instance.cpu.reserved_cores.value),\n    avg_memory_gb = AVG(gcp.compute.instance.memory.balloon.ram_size.value / 1073741824.0)\n    BY gcp.labels.team,\n       cloud.machine.type,\n       cloud.region\n| SORT avg_drift DESC\n| LIMIT 15",
+      "params": {}
+    }
+  },
+  {
+    "id": "kafeju.get_historical_workload_patterns",
+    "type": "esql",
+    "description": "Analyzes historical execution data for specific workload types to show actual resource consumption patterns, including average, peak, and P95 usage. Helps recommend instance sizes based on real-world data.",
+    "tags": [
+      "kafeju",
+      "infrastructure",
+      "vm_usage"
+    ],
+    "configuration": {
+      "query": "FROM metrics-gcp.compute-*\n| WHERE gcp.labels.team IS NOT NULL\n| EVAL\n    cpu_usage_pct = gcp.compute.instance.cpu.utilization.pct * 100,\n    memory_usage_pct = (gcp.compute.instance.memory.balloon.ram_used.value / gcp.compute.instance.memory.balloon.ram_size.value) * 100\n| STATS\n    data_points = COUNT(*),\n    avg_cpu_percent = AVG(cpu_usage_pct),\n    p95_cpu_percent = PERCENTILE(cpu_usage_pct, 95),\n    p99_cpu_percent = PERCENTILE(cpu_usage_pct, 99),\n    max_cpu_percent = MAX(cpu_usage_pct),\n    avg_memory_percent = AVG(memory_usage_pct),\n    p95_memory_percent = PERCENTILE(memory_usage_pct, 95),\n    p99_memory_percent = PERCENTILE(memory_usage_pct, 99),\n    max_memory_percent = MAX(memory_usage_pct),\n    first_seen = MIN(@timestamp),\n    last_seen = MAX(@timestamp)\n    BY cloud.machine.type, gcp.labels.team, cloud.region\n| EVAL\n    duration_hours = (TO_LONG(last_seen) - TO_LONG(first_seen)) / 3600000\n| SORT data_points DESC\n| LIMIT 20",
+      "params": {}
+    }
+  },
+  {
+    "id": "kafeju.get_label_workload_patterns",
+    "type": "esql",
+    "description": "Analyzes workload patterns filtered by team, environment, workload_type, or other labels. Returns label-specific resource usage patterns to answer: \"What does MY team actually use for this workload type?\"",
+    "tags": [
+      "kafeju",
+      "vm_usage",
+      "infrastructure"
+    ],
+    "configuration": {
+      "query": "FROM metrics-gcp.compute-*\n| WHERE gcp.labels.team IS NOT NULL\n| EVAL\n    cpu_usage_pct = gcp.compute.instance.cpu.utilization.pct * 100,\n    memory_usage_pct = (gcp.compute.instance.memory.balloon.ram_used.value / gcp.compute.instance.memory.balloon.ram_size.value) * 100\n| STATS \n    data_points = COUNT(*),\n    instances = COUNT_DISTINCT(cloud.instance.id),\n    avg_cpu_percent = AVG(cpu_usage_pct),\n    p95_cpu_percent = PERCENTILE(cpu_usage_pct, 95),\n    p99_cpu_percent = PERCENTILE(cpu_usage_pct, 99),\n    avg_memory_percent = AVG(memory_usage_pct),\n    p95_memory_percent = PERCENTILE(memory_usage_pct, 95),\n    p99_memory_percent = PERCENTILE(memory_usage_pct, 99),\n    common_machine_types = VALUES(cloud.machine.type)\n    BY gcp.labels.team, cloud.region\n| SORT data_points DESC\n| LIMIT 20",
+      "params": {}
+    }
+  },
+  {
+    "id": "kafeju.recommend_instance_for_requirements",
+    "type": "esql",
+    "description": "Recommends GCP instance types based on CPU and memory requirements. Finds instances that meet minimum specs while optimizing for cost. Results should be filtered by the agent based on user's specific CPU/memory needs.\n",
+    "tags": [],
+    "configuration": {
+      "query": "FROM gcp-vm-pricing\n| EVAL\n    cost_per_core_hour = pricing.price_per_hour_usd / pricing.cpu_cores,\n    cost_per_gb_hour = pricing.price_per_hour_usd / pricing.memory_gb\n| KEEP machine_type, cloud.region, machine_series,\n       pricing.cpu_cores, pricing.memory_gb, \n       pricing.price_per_hour_usd, pricing.price_per_month_usd,\n       cost_per_core_hour, cost_per_gb_hour\n| SORT pricing.price_per_month_usd ASC\n| LIMIT 50",
+      "params": {}
+    }
+  },
+  {
+    "id": "kafeju.get_cost_projection",
+    "type": "esql",
+    "description": "Calculates cost projections based on recent usage trends. Uses 7-day historical data to project 30-day costs with trend analysis. Not ML-based forecasting (which requires Elasticsearch Cloud, not Serverless).",
+    "tags": [
+      "kafeju",
+      "infrastructure",
+      "cost"
+    ],
+    "configuration": {
+      "query": "FROM metrics-gcp.compute-*\n| WHERE gcp.labels.team IS NOT NULL\n  AND @timestamp > NOW() - 7 days\n| EVAL\n    daily_bucket = DATE_TRUNC(1 day, @timestamp)\n| ENRICH gcp-pricing-policy ON cloud.machine.type WITH pricing.price_per_hour_usd\n| EVAL\n    cost_per_hour = COALESCE(pricing.price_per_hour_usd, 0.20)\n| STATS\n    daily_instances = COUNT_DISTINCT(cloud.instance.id),\n    avg_cost_per_hour = AVG(cost_per_hour)\n    BY daily_bucket, gcp.labels.team\n| EVAL\n    daily_cost = daily_instances * avg_cost_per_hour * 24\n| STATS\n    avg_daily_cost = AVG(daily_cost),\n    trend = (MAX(daily_cost) - MIN(daily_cost)) / 7\n    BY gcp.labels.team\n| EVAL\n    projected_30_day_cost = avg_daily_cost * 30,\n    projected_with_trend = (avg_daily_cost + (trend * 30)) * 30\n| SORT projected_30_day_cost DESC\n| LIMIT 10",
+      "params": {}
+    }
+  },
+  {
+    "id": "kafeju.detect_resource_anomalies",
+    "type": "esql",
+    "description": "Identifies VMs with unusual resource usage patterns detected by the ML job `vm-capacity-planning`. Queries real ML anomaly results from `.ml-anomalies-*` index. Automatically finds problems that deviate from learned baselines.",
+    "tags": [
+      "kafeju",
+      "infrastructure",
+      "vm_usage",
+      "ml"
+    ],
+    "configuration": {
+      "query": "FROM .ml-anomalies-*\n| WHERE job_id == \"vm-capacity-planning\"\n  AND result_type == \"bucket\"\n  AND anomaly_score > 0\n  AND is_interim == false\n| EVAL \n    anomaly_date = DATE_FORMAT(\"yyyy-MM-dd HH:mm\", timestamp),\n    severity_level = CASE(\n        anomaly_score >= 75, \"CRITICAL\",\n        anomaly_score >= 50, \"HIGH\",\n        anomaly_score >= 25, \"MEDIUM\",\n        \"LOW\"\n    )\n| SORT anomaly_score DESC\n| KEEP anomaly_date, severity_level, anomaly_score, \n       event_count, bucket_span\n| LIMIT 20",
+      "params": {}
+    }
+  },
+  {
+    "id": "kafeju.predict_resize_needs",
+    "type": "esql",
+    "description": "Analyzes 30-day CPU usage trends to predict when teams will hit 90% capacity. Calculates growth rates and provides proactive resize recommendations based on real metrics.",
+    "tags": [
+      "kafeju",
+      "vm_usage",
+      "infrastructure"
+    ],
+    "configuration": {
+      "query": "FROM metrics-gcp.compute-*\n| WHERE gcp.labels.team IS NOT NULL\n  AND @timestamp > NOW() - 30 days\n| EVAL\n    week_bucket = DATE_TRUNC(7 days, @timestamp),\n    cpu_used = gcp.compute.instance.cpu.utilization.pct * gcp.compute.instance.cpu.reserved_cores.value\n| STATS\n    avg_cpu_used = AVG(cpu_used),\n    avg_cpu_allocated = AVG(gcp.compute.instance.cpu.reserved_cores.value),\n    instance_count = COUNT_DISTINCT(cloud.instance.id)\n    BY week_bucket, gcp.labels.team\n| SORT week_bucket ASC\n| STATS\n    earliest_usage = MIN(avg_cpu_used),\n    latest_usage = MAX(avg_cpu_used),\n    current_capacity = AVG(avg_cpu_allocated),\n    weeks_of_data = COUNT(*),\n    avg_instances = AVG(instance_count)\n    BY gcp.labels.team\n| EVAL\n    growth_rate_per_week = (latest_usage - earliest_usage) / weeks_of_data,\n    current_utilization = (latest_usage / current_capacity) * 100,\n    capacity_remaining = current_capacity * 0.90 - latest_usage,\n    weeks_until_90_percent = CASE(\n        growth_rate_per_week > 0, capacity_remaining / growth_rate_per_week,\n        null\n    ),\n    urgency = CASE(\n        weeks_until_90_percent <= 4, \"\ud83d\udd34 URGENT\",\n        weeks_until_90_percent <= 8, \"\ud83d\udfe1 SOON\",\n        weeks_until_90_percent <= 12, \"\ud83d\udfe0 PLAN\",\n        \"\ud83d\udfe2 WATCH\"\n    ),\n    recommendation = CASE(\n        weeks_until_90_percent <= 4, \"URGENT_RESIZE\",\n        weeks_until_90_percent <= 8, \"PLAN_RESIZE\",\n        \"MONITOR\"\n    )\n| WHERE weeks_until_90_percent IS NOT NULL AND recommendation != \"MONITOR\"\n| KEEP gcp.labels.team, urgency,\n       latest_usage, current_capacity, current_utilization,\n       weeks_until_90_percent, growth_rate_per_week,\n       recommendation, avg_instances\n| SORT weeks_until_90_percent ASC\n| LIMIT 10",
+      "params": {}
+    }
+  },
+  {
+    "id": "kafeju.detect_team_anomalies",
+    "type": "esql",
+    "description": "Identifies workloads within teams that have unusual resource patterns. Classifies workloads as HEAVY_USER (>5 cores avg), LIGHT_USER (<1 core avg), or NORMAL. Results are sorted by team to make it easy to spot outliers within each team's context.",
+    "tags": [
+      "kafeju",
+      "infrastructure",
+      "vm_usage",
+      "ml"
+    ],
+    "configuration": {
+      "query": "FROM metrics-gcp.compute-*\n| WHERE gcp.labels.team IS NOT NULL\n  AND @timestamp > NOW() - 7 days\n| EVAL\n    cpu_used = gcp.compute.instance.cpu.utilization.pct * gcp.compute.instance.cpu.reserved_cores.value,\n    memory_used_gb = gcp.compute.instance.memory.balloon.ram_used.value / 1073741824.0,\n    cpu_utilization_pct = gcp.compute.instance.cpu.utilization.pct * 100\n| STATS\n    avg_cpu_cores = AVG(cpu_used),\n    p95_cpu_cores = PERCENTILE(cpu_used, 95),\n    avg_memory_gb = AVG(memory_used_gb),\n    avg_cpu_util_pct = AVG(cpu_utilization_pct),\n    instance_count = COUNT_DISTINCT(cloud.instance.id),\n    sample_machine = VALUES(cloud.machine.type)\n    BY gcp.labels.team\n| EVAL\n    anomaly_score = CASE(\n        avg_cpu_cores > 7, 100,\n        avg_cpu_cores > 5, 75,\n        avg_cpu_cores > 3, 50,\n        avg_cpu_cores < 0.5, 75,\n        avg_cpu_cores < 1, 50,\n        25\n    ),\n    anomaly_level = CASE(\n        avg_cpu_cores > 7 OR avg_cpu_cores < 0.5, \"\ud83d\udd34 CRITICAL\",\n        avg_cpu_cores > 5 OR avg_cpu_cores < 1, \"\ud83d\udfe0 HIGH\",\n        avg_cpu_cores > 3, \"\ud83d\udfe1 MEDIUM\",\n        \"\ud83d\udfe2 NORMAL\"\n    ),\n    resource_pattern = CASE(\n        avg_cpu_cores > 5, \"HEAVY_USER\",\n        avg_cpu_cores < 1, \"LIGHT_USER\",\n        \"NORMAL\"\n    )\n| WHERE anomaly_score > 25\n| SORT gcp.labels.team ASC, avg_cpu_cores DESC\n| KEEP gcp.labels.team, anomaly_level, resource_pattern,\n       avg_cpu_cores, p95_cpu_cores, avg_cpu_util_pct, avg_memory_gb, \n       instance_count, sample_machine\n| LIMIT 50",
+      "params": {}
+    }
+  },
+  {
+    "id": "kafeju.calculate_cost_per_instance_run",
+    "type": "esql",
+    "description": "Calculates cost per instance run by combining uptime data with pricing. Shows which instances cost the most and their efficiency (high CPU usage = efficient, low = wasteful). Ideal for analyzing short-lived CI/CD instances.",
+    "tags": [
+      "kafeju",
+      "infrastructure",
+      "cost"
+    ],
+    "configuration": {
+      "query": "FROM metrics-gcp.compute-*\n| WHERE @timestamp > NOW() - 7 days\n  AND gcp.labels.team IS NOT NULL\n| ENRICH instance-lifecycle-policy ON cloud.instance.id\n| ENRICH gcp-pricing-policy ON cloud.machine.type WITH pricing.price_per_hour_usd\n| STATS\n    avg_cpu_usage = AVG(gcp.compute.instance.cpu.utilization.pct) * 100,\n    uptime_hours = MAX(instance_lifecycle.uptime_hours),\n    price_per_hour = MAX(pricing.price_per_hour_usd)\n    BY cloud.instance.name, cloud.machine.type, gcp.labels.team\n| EVAL\n    total_cost = uptime_hours * price_per_hour,\n    cost_efficiency = CASE(\n        avg_cpu_usage > 70, \"Efficient\",\n        avg_cpu_usage > 40, \"Moderate\",\n        \"Wasteful\"\n    )\n| WHERE uptime_hours IS NOT NULL\n| SORT total_cost DESC\n| KEEP cloud.instance.name, gcp.labels.team, cloud.machine.type,\n       uptime_hours, total_cost, avg_cpu_usage, cost_efficiency, price_per_hour\n| LIMIT 50",
+      "params": {}
+    }
+  },
+  {
+    "id": "kafeju.get_instance_cost_and_specs",
+    "type": "esql",
+    "description": "Retrieves current cost and technical specifications for any VM instance type from the GCP pricing catalog. Shows pricing across all machine types in the catalog.",
+    "tags": [
+      "kafeju",
+      "infrastructure",
+      "cost"
+    ],
+    "configuration": {
+      "query": "FROM gcp-pricing-catalog\n| KEEP machine_type, machine_family, region, cpu_cores, memory_gb, \n       cost_per_hour_usd, cost_per_month_usd, \n       cost_per_core_hour, cost_per_gb_hour, \n       description, use_case\n| SORT cost_per_month_usd ASC\n| LIMIT 30",
+      "params": {}
+    }
+  }
+]
