@@ -29,20 +29,20 @@
       },
       "description": "Detect abnormal resource usage patterns",
       "analysis_config": {
-        "bucket_span": "15m",
+        "bucket_span": "1h",
         "detectors": [
           {
-            "detector_description": "High CPU usage",
+            "detector_description": "High CPU usage per team",
             "function": "high_mean",
             "field_name": "resource_usage.cpu.avg_percent",
-            "partition_field_name": "vm_info.vm_id",
+            "partition_field_name": "metadata.team",
             "detector_index": 0
           },
           {
-            "detector_description": "High memory usage",
+            "detector_description": "High memory usage per team",
             "function": "high_mean",
             "field_name": "resource_usage.memory.avg_percent",
-            "partition_field_name": "vm_info.vm_id",
+            "partition_field_name": "metadata.team",
             "detector_index": 1
           }
         ],
@@ -228,20 +228,20 @@
       },
       "description": "VM capacity planning - detect CPU and memory usage anomalies",
       "analysis_config": {
-        "bucket_span": "15m",
+        "bucket_span": "1h",
         "detectors": [
           {
-            "detector_description": "Mean CPU utilization per VM",
-            "function": "mean",
+            "detector_description": "Unusual CPU utilization vs peer VMs",
+            "function": "high_mean",
             "field_name": "resource_usage.cpu.avg_percent",
-            "partition_field_name": "vm_info.vm_id",
+            "over_field_name": "vm_info.vm_id",
             "detector_index": 0
           },
           {
-            "detector_description": "Mean memory utilization per VM",
-            "function": "mean",
+            "detector_description": "Unusual memory utilization vs peer VMs",
+            "function": "high_mean",
             "field_name": "resource_usage.memory.avg_percent",
-            "partition_field_name": "vm_info.vm_id",
+            "over_field_name": "vm_info.vm_id",
             "detector_index": 1
           }
         ],
