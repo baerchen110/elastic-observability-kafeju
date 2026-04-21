@@ -1,7 +1,7 @@
-# Elasticsearch + Kibana: latest 9.2.x patch line (bump all three images together).
+# Elasticsearch + Kibana: latest 9.3.x patch line (bump all three images together).
 services:
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:9.2.8
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.3.3
     container_name: elasticsearch
     environment:
       - discovery.type=single-node
@@ -29,7 +29,7 @@ services:
 
   # Kibana 9+ forbids the elastic superuser for the Elasticsearch client; align kibana_system with ELASTIC_PASSWORD.
   bootstrap-kibana-user:
-    image: docker.elastic.co/elasticsearch/elasticsearch:9.2.8
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.3.3
     depends_on:
       elasticsearch:
         condition: service_healthy
@@ -46,7 +46,7 @@ services:
     restart: "no"
 
   kibana:
-    image: docker.elastic.co/kibana/kibana:9.2.8
+    image: docker.elastic.co/kibana/kibana:9.3.3
     container_name: kibana
     environment:
       - ELASTICSEARCH_PASSWORD=${ELASTIC_PASSWORD:-workshopAdmin1!}
