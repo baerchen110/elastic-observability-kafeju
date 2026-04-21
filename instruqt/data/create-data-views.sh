@@ -7,20 +7,23 @@ ES_PASS="${ES_PASS:-workshopAdmin1!}"
 
 echo "Creating data views on $KIBANA_URL..."
 
-declare -A DATA_VIEWS
-DATA_VIEWS=(
-  ["workshop-executions"]="gcp-resource-executions-workshop|execution_time.started_at|GCP Resource Executions"
-  ["workshop-anomalies"]="ml-predictions-anomalies-workshop|@timestamp|ML Anomalies"
-  ["workshop-growth"]="ml-predictions-growth-workshop|@timestamp|ML Growth Predictions"
-  ["workshop-pricing"]="gcp-pricing-catalog|last_updated|GCP Pricing Catalog"
-  ["workshop-lifecycle"]="gcp-instance-lifecycle-workshop|@timestamp|GCP Instance Lifecycle"
-  ["workshop-billing"]="gcp-billing-workshop|@timestamp|GCP Billing"
-  ["workshop-all-gcp"]="gcp-*|@timestamp|All GCP Data"
-  ["workshop-all-ml"]="ml-predictions-*|@timestamp|All ML Predictions"
+# Portable across Bash 3 (macOS) and Bash 4+: id:title|timeField|name
+DATA_VIEW_LINES=(
+  'workshop-executions:gcp-resource-executions-workshop|execution_time.started_at|GCP Resource Executions'
+  'workshop-anomalies:ml-predictions-anomalies-workshop|@timestamp|ML Anomalies'
+  'workshop-growth:ml-predictions-growth-workshop|@timestamp|ML Growth Predictions'
+  'workshop-pricing:gcp-pricing-catalog|last_updated|GCP Pricing Catalog'
+  'workshop-lifecycle:gcp-instance-lifecycle-workshop|@timestamp|GCP Instance Lifecycle'
+  'workshop-billing:gcp-billing-workshop|@timestamp|GCP Billing'
+  'workshop-all-gcp:gcp-*|@timestamp|All GCP Data'
+  'workshop-all-ml:ml-predictions-*|@timestamp|All ML Predictions'
 )
 
-for ID in "${!DATA_VIEWS[@]}"; do
-  IFS='|' read -r TITLE TIME_FIELD NAME <<< "${DATA_VIEWS[$ID]}"
+for entry in "${DATA_VIEW_LINES[@]}"; do
+  ID="${entry%%:*}"
+  rest="${entry#*:}"
+  IFS='|' read -r TITLE TIME_FIELD NAME <<< "$rest"
+
   PAYLOAD=$(python3 -c "
 import json
 print(json.dumps({'data_view': {

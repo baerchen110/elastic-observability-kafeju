@@ -1,8 +1,6 @@
-version: "3.8"
-
 services:
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:9.0.0
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.2.2
     container_name: elasticsearch
     environment:
       - discovery.type=single-node
@@ -28,23 +26,38 @@ services:
       retries: 30
       start_period: 60s
 
+  # Kibana 9+ forbids the elastic superuser for the Elasticsearch client; align kibana_system with ELASTIC_PASSWORD.
+  bootstrap-kibana-user:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.2.2
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    environment:
+      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:-workshopAdmin1!}
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - >-
+        set -euo pipefail &&
+        curl -sS -f -u "elastic:$$ELASTIC_PASSWORD"
+        -X POST "http://elasticsearch:9200/_security/user/kibana_system/_password"
+        -H "Content-Type: application/json"
+        -d "{\"password\":\"$$ELASTIC_PASSWORD\"}"
+    restart: "no"
+
   kibana:
-    image: docker.elastic.co/kibana/kibana:9.0.0
+    image: docker.elastic.co/kibana/kibana:9.2.2
     container_name: kibana
     environment:
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-      - ELASTICSEARCH_USERNAME=elastic
       - ELASTICSEARCH_PASSWORD=${ELASTIC_PASSWORD:-workshopAdmin1!}
-      - SERVER_NAME=kibana
-      - SERVER_HOST=0.0.0.0
-      - XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=workshop-encryption-key-min-32-chars!!
-      - XPACK_SECURITY_ENCRYPTIONKEY=workshop-security-key-minimum-32-chars!!
-      - XPACK_REPORTING_ENCRYPTIONKEY=workshop-reporting-key-min-32-chars!!!
+    volumes:
+      - ./kibana/kibana.yml:/usr/share/kibana/config/kibana.yml:ro
     ports:
       - "5601:5601"
     depends_on:
       elasticsearch:
         condition: service_healthy
+      bootstrap-kibana-user:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "curl -s http://localhost:5601/api/status | grep -q '\"level\":\"available\"'"]
       interval: 10s
