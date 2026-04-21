@@ -18,7 +18,7 @@ systemctl start docker
 
 echo "=== Step 2: Start Elasticsearch + Kibana ==="
 cd "$INSTRUQT_DIR"
-ELASTIC_PASSWORD="$ELASTIC_PASSWORD" docker-compose up -d
+ELASTIC_PASSWORD="$ELASTIC_PASSWORD" docker compose up -d
 
 echo "=== Step 3: Wait for Elasticsearch ==="
 for i in $(seq 1 60); do
@@ -52,6 +52,9 @@ bash "$INSTRUQT_DIR/data/create-tools.sh"
 
 echo "=== Step 8: Create data views ==="
 bash "$INSTRUQT_DIR/data/create-data-views.sh"
+
+echo "=== Step 9: Create Kafeju agent ==="
+bash "$INSTRUQT_DIR/data/create-kafeju-agent.sh"
 
 echo "=== Setup complete ==="
 echo "  Elasticsearch: $ES_URL"
