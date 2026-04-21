@@ -1,4 +1,8 @@
-# Bound into the Kibana container by docker-compose.yml (workshop defaults).
+# WORKSHOP ONLY — contains demo encryption keys and a shared password flow.
+# Do not reuse this file or its keys in any non-workshop environment.
+#
+# Bound into the Kibana container by docker-compose.yml.
+
 server.host: "0.0.0.0"
 server.name: kibana
 
@@ -10,6 +14,10 @@ xpack.encryptedSavedObjects.encryptionKey: "workshop-encryption-key-min-32-chars
 xpack.security.encryptionKey: "workshop-security-key-minimum-32-chars!!"
 xpack.reporting.encryptionKey: "workshop-reporting-key-min-32-chars!!!"
 
+# Agent Builder feature flag. Verify the correct key for the pinned stack
+# version before merging (on 9.3.x this is the advanced-setting override);
+# if Agent Builder does not appear in the UI or /api/agent_builder returns 404,
+# switch to `xpack.agentBuilder.enabled: true` at the top level instead.
 uiSettings:
   overrides:
     "agentBuilder:enabled": true

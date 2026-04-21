@@ -7,31 +7,33 @@ ES_USER="${ES_USER:-elastic}"
 ES_PASS="${ES_PASS:-workshopAdmin1!}"
 AGENT_FILE="$SCRIPT_DIR/kafeju-agent.json"
 
-echo "Creating Kafeju agent on $KIBANA_URL..."
-python3 -c "
-import json, subprocess, sys
-kibana = '$KIBANA_URL'
-auth = '$ES_USER:$ES_PASS'
-with open('$AGENT_FILE') as f:
-    agents = json.load(f)
-for a in agents:
-    a.pop('readonly', None)
-    a.pop('type', None)
-    r = subprocess.run(
-        ['curl', '-s', '-X', 'POST', f'{kibana}/api/agent_builder/agents',
-         '-u', auth, '-H', 'kbn-xsrf: true', '-H', 'Content-Type: application/json',
-         '-d', json.dumps(a)],
-        capture_output=True, text=True,
-    )
-    print(r.stdout[:2000])
-    try:
-        resp = json.loads(r.stdout)
-        if resp.get('id'):
-            print('OK agent', resp['id'])
-        else:
-            print('FAIL', resp)
-            sys.exit(1)
-    except Exception as e:
-        print('FAIL parse', e, r.stdout[:500])
-        sys.exit(1)
-"
+if ! command -v jq >/dev/null 2>&1; then
+  echo "jq is required (brew install jq / apt-get install -y jq)" >&2
+  exit 1
+fi
+
+echo "Creating Kafeju agent(s) on $KIBANA_URL..."
+
+# Emit each top-level object as a single compact JSON line so password/value
+# special characters can never collide with shell quoting.
+jq -c '.[]' "$AGENT_FILE" | while IFS= read -r agent_json; do
+  AGENT_ID="$(printf '%s' "$agent_json" | jq -r '.id')"
+
+  HTTP_CODE=$(curl -sS -o /tmp/kafeju-agent-resp.json -w "%{http_code}" \
+    -u "$ES_USER:$ES_PASS" \
+    -H "kbn-xsrf: true" \
+    -H "Content-Type: application/json" \
+    -X POST "$KIBANA_URL/api/agent_builder/agents" \
+    -d "$agent_json")
+
+  if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ]; then
+    echo "  OK   agent '$AGENT_ID' (HTTP $HTTP_CODE)"
+  else
+    echo "  FAIL agent '$AGENT_ID' (HTTP $HTTP_CODE)" >&2
+    cat /tmp/kafeju-agent-resp.json >&2 || true
+    echo >&2
+    exit 1
+  fi
+done
+
+echo "Kafeju agent(s) created."

@@ -1,7 +1,6 @@
 [
   {
-    "id": "kafuju",
-    "type": "chat",
+    "id": "kafeju",
     "name": "Kafeju",
     "description": "The infrastructure fortune teller. Right size your compute instances based on utilization and save costs.",
     "labels": ["kafeju", "infrastructure", "cost"],
@@ -32,7 +31,6 @@
           ]
         }
       ]
-    },
-    "readonly": false
+    }
   }
 ]
