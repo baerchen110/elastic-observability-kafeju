@@ -59,11 +59,11 @@ raw  response that fed the next reasoning step.
 Kafeju weaves the five tool calls into a structured recommendation.
 In the workshop dataset you should see something close to:
 
-- **Cheapest region:** `us-central1` *(note: all rows in
-  `gcp-pricing-catalog` live in `us-central1` for this workshop —
-  so "cheapest region" here is really "only region in the catalog".
-  Good reminder that tool output is only as rich as the data
-  underneath.)*
+- **Cheapest region:** `us-central1` *(note: all rows in the
+  **GCP Pricing Catalog** data view live in `us-central1` for this
+  workshop — so "cheapest region" here is really "only region in
+  the catalog". Good reminder that tool output is only as rich as
+  the data underneath.)*
 - **Current machine type:** `n2-standard-32` — ~**$1,134/month** per VM
 - **Recommended rightsize:** `e2-standard-4` (~$98/mo) or
   `n2-standard-4` (~$142/mo), sized for P95 + 20% headroom

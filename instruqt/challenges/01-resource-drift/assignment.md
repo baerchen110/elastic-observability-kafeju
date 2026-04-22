@@ -72,9 +72,8 @@ Kafeju agent and find where its current tools fall short.
 Before asking an AI anything, *you* should know what data exists.
 
 1. Open the hamburger menu > **Analytics** > **Discover**.
-2. In the data view selector (top-left), pick the
-   **GCP Resource Executions** data view (underlying index:
-   `gcp-resource-executions-*`).
+2. In the data view selector (top-left), pick **GCP Resource
+   Executions**.
 3. Expand one document and skim these fields:
 
 | Field | What it means |
@@ -86,18 +85,18 @@ Before asking an AI anything, *you* should know what data exists.
 | `drift_metrics.combined_drift_score` | % of allocated resources that are *not* being used |
 | `cost_actual.total_cost_usd` | Cost of that execution |
 
-4. Now switch the data view to **GCP Pricing Catalog** (index:
-   `gcp-pricing-catalog`) and expand a document. Note how each
-   machine type has an hourly price per region.
-5. Switch once more to **ML Anomalies** (index:
-   `ml-predictions-anomalies-*`). Each record has a `record_score`
-   (how anomalous) and the VM / team it belongs to.
+4. Now switch the data view to **GCP Pricing Catalog** and expand
+   a document. Note how each machine type has an hourly price per
+   region.
+5. Switch once more to **ML Anomalies**. Each record has a
+   `record_score` (how anomalous) and the VM / team it belongs to.
 
-> **What to notice:** Three *independent* datasets tell you the story —
-> actual usage, pricing, and ML anomaly scores. A good agent tool has
-> to join across them. Keep this in mind: any question that needs,
-> say, "cheapest region for n2-standard-8" must reach into
-> `gcp-pricing-catalog`, not the executions index.
+> **What to notice:** Three *independent* data views tell you the
+> story — actual usage (**GCP Resource Executions**), pricing
+> (**GCP Pricing Catalog**), and ML anomaly scores (**ML
+> Anomalies**). A good agent tool has to join across them. Any
+> question like *"cheapest region for n2-standard-8"* must reach
+> into the pricing catalog, not the executions data.
 
 ---
 
@@ -188,9 +187,10 @@ Kafeju will either:
 - apologize that it doesn't have the right data.
 
 > **What to notice:** The data to answer both questions *is already in
-> the cluster* — pricing lives in `gcp-pricing-catalog`, idle VMs live
-> in `gcp-resource-executions-*`. What's missing is a **tool** that
-> knows how to query them. You will fix that in Challenges 3 and 4.
+> the cluster* — pricing lives in **GCP Pricing Catalog**, idle VMs
+> live in **GCP Resource Executions**. What's missing is a **tool**
+> that knows how to query them. You will fix that in Challenges 3
+> and 4.
 
 **Key insight:** An agent's capability is bounded by its tools. No
 regional-pricing tool → no regional-pricing answers. No

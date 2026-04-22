@@ -40,7 +40,8 @@ that the Kafeju agent currently cannot answer.
 
 **Business question:** "Which GCP region is cheapest for running VMs?"
 
-**Index:** `gcp-pricing-catalog`
+**Data view:** **GCP Pricing Catalog** (ES|QL index pattern:
+`gcp-pricing-catalog`)
 
 **Explore first:** Run this in Discover to see the fields:
 ```sql
@@ -87,7 +88,7 @@ data doesn't support a multi-region ranking.
 
 **Business question:** "Show me weekly cost trends per team."
 
-**Index:** `gcp-billing-*` (data view: **GCP Billing**)
+**Data view:** **GCP Billing** (ES|QL index pattern: `gcp-billing-*`)
 
 **Explore first:**
 ```sql
@@ -128,7 +129,8 @@ FROM gcp-billing-*
 
 **Business question:** "Which teams will need more capacity soonest?"
 
-**Index:** `ml-predictions-growth-*` (data view: **ML Growth Predictions**)
+**Data view:** **ML Growth Predictions** (ES|QL index pattern:
+`ml-predictions-growth-*`)
 
 **Explore first:**
 ```sql
@@ -183,7 +185,8 @@ recommendation.
 **Business question:** "How much is each team overspending vs actual
 usage?"
 
-**Index:** `gcp-resource-executions-*`
+**Data view:** **GCP Resource Executions** (ES|QL index pattern:
+`gcp-resource-executions-*`)
 
 **Explore first:**
 ```sql

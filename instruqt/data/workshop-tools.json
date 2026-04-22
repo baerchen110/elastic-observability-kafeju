@@ -35,7 +35,7 @@
     "description": "Identifies VMs with unusual resource usage patterns from ML anomaly predictions. Shows anomaly severity, actual vs typical values, and affected teams. Use when asked: 'Find resource anomalies', 'Which VMs have unusual behavior?', 'Show me zombie VMs', or 'Detect anomalies'.",
     "tags": ["kafeju", "infrastructure", "ml", "anomaly"],
     "configuration": {
-      "query": "FROM ml-predictions-anomalies*\n| WHERE record_score > 25\n| SORT record_score DESC\n| KEEP @timestamp, vm_id, vm_type, team, severity, record_score, actual, typical, function_description, partition_field_value\n| LIMIT 20",
+      "query": "FROM ml-predictions-anomalies-*\n| WHERE record_score > 25\n| SORT record_score DESC\n| KEEP @timestamp, vm_id, vm_type, team, severity, record_score, actual, typical, function_description, partition_field_value\n| LIMIT 20",
       "params": {}
     }
   },

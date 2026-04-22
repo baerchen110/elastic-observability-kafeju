@@ -82,8 +82,9 @@ Where do the results live?
   Anomaly Explorer reads from — and it's what the Kafeju anomaly
   tool will query with ES|QL in a moment.
 - Growth / capacity forecasts (`workload-growth-rate`) are
-  post-processed into **`ml-predictions-growth-*`** (surfaced as the
-  **ML Growth Predictions** data view) for a simpler per-team shape.
+  post-processed into the `ml-predictions-growth-workshop` index
+  (surfaced as the **ML Growth Predictions** data view) for a
+  simpler per-team shape.
 
 You'll see `.ml-anomalies-*` in action in the next steps.
 
@@ -237,9 +238,9 @@ Read it line by line:
 > model unusually alarmed?"*. You'll feel this gap in Step 4.
 
 While you're in the Tools tab, also spot **`kafeju.predict_resize_needs`**
-— it follows the same pattern, but reads from `ml-predictions-growth-*`
-(the `workload-growth-rate` job's output, surfaced as the **ML Growth
-Predictions** data view). Two tools, same recipe.
+— it follows the same pattern, but reads from the **ML Growth
+Predictions** data view (backed by `ml-predictions-growth-workshop`,
+the `workload-growth-rate` job's output). Two tools, same recipe.
 
 > **Optional (Terminal):** If you prefer CLI, the same information
 > is available at `GET /api/agent_builder/tools` — but the UI is the

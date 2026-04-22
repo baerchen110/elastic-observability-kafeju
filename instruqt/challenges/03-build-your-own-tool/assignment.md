@@ -32,7 +32,8 @@ contents: |
 
 Think about what you need:
 
-- **Source:** `gcp-resource-executions-*` (data view: **GCP Resource Executions** — has CPU usage and cost data)
+- **Data view:** **GCP Resource Executions** — has CPU usage and cost
+  data (ES|QL index pattern: `gcp-resource-executions-*`)
 - **Filter:** CPU usage below 15% (barely alive)
 - **Aggregate:** Group by team, VM type, resource name
 - **Metrics:** Average CPU, drift score, total cost, occurrence count
