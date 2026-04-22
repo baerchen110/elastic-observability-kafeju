@@ -34,7 +34,7 @@ By the end of this workshop, participants will be able to:
 | 0:50 | Module 3: Build Your First Tool | 40 min | Challenge 3 |
 | 1:30 | Break | 10 min | — |
 | 1:40 | Module 4: Design Your Own Tool | 40 min | Challenge 4 |
-| 2:20 | Module 5: The Wow Moment + Wrap-up | 30 min | Challenge 5 |
+| 2:20 | Module 5: Getting Further + Wrap-up | 30 min | Challenge 5 |
 | 2:50 | Q&A and Feedback | 10 min | — |
 
 ### Positioning vs Workshop 1
@@ -208,7 +208,7 @@ done
 
 **With 10 min left:** Call for volunteers to share their tool live.
 
-### Module 5: The Wow Moment (30 min)
+### Module 5: Getting Further (30 min)
 
 **The compound question demo is yours to run.** Have the zombie VM tool and at least one regional/pricing tool ready (either from a participant or pre-built as backup).
 

@@ -326,7 +326,7 @@ When the facilitator calls time, 2-3 volunteers will share:
 
 ---
 
-## Module 5: The Wow Moment (30 min)
+## Module 5: Getting Further (30 min)
 
 ### The Compound Question
 

@@ -14,7 +14,7 @@ print(len(participant))
 " 2>/dev/null || echo "0")
 
 if [ "$TOOL_COUNT" -lt 2 ]; then
-  fail-message "Expected at least 2 participant tools for the wow moment. Found $TOOL_COUNT."
+  fail-message "Expected at least 2 participant tools for Getting Further. Found $TOOL_COUNT."
   exit 1
 fi
 

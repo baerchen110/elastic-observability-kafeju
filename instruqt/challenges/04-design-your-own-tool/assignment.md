@@ -9,9 +9,6 @@ tabs:
     type: service
     hostname: elastic-vm
     port: 5601
-  - title: Terminal
-    type: terminal
-    hostname: elastic-vm
 notes:
   - type: text
     contents: |
@@ -27,8 +24,8 @@ notes:
       1. Explore the index in Discover to understand the fields
       2. Write an ES|QL query that answers the business question
       3. Test the query in Discover (does it return useful results?)
-      4. Register it as a tool via the API
-      5. Wire it into the Kafeju agent
+      4. Register it as a tool in the Agent Builder UI
+      5. Wire it into the Kafeju agent in the Agents tab
       6. Test with a natural-language prompt
 ---
 
@@ -220,57 +217,59 @@ headline number the agent will narrate back.
 
 ---
 
-## Registration Template
+## Register and Wire Your Tool (UI)
 
-Once your query works in Discover, register it via the Terminal:
+Once your query works in Discover, follow the same UI flow you used in
+Challenge 3 — no terminal needed.
 
-```bash
-curl -s -X POST http://localhost:5601/api/agent_builder/tools \
-  -u elastic:workshopAdmin1! \
-  -H "kbn-xsrf: true" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "id": "participant.YOUR_TOOL_NAME",
-    "description": "YOUR DESCRIPTION — be specific about when the AI should use this",
-    "tags": ["participant"],
-    "configuration": {
-      "query": "YOUR ESQL QUERY (use \\n for newlines within the string)",
-      "params": {}
-    }
-  }'
-```
+### Register the tool
 
-Then wire it into the agent:
+1. Hamburger menu > **Agent Builder** > **Tools** tab.
+2. Click **Create** (or **New tool**).
+3. Fill in the form:
 
-```bash
-curl -s -u elastic:workshopAdmin1! \
-  http://localhost:5601/api/agent_builder/agents \
-  -H "kbn-xsrf: true" | python3 -c "
-import json, sys
-agents = json.load(sys.stdin)['results']
-kafeju = next(a for a in agents if a['id'] == 'kafuju')
-tools = kafeju['configuration']['tools'][0]['tool_ids']
-new_tool = 'participant.YOUR_TOOL_NAME'  # <-- CHANGE THIS
-if new_tool not in tools:
-    tools.append(new_tool)
-kafeju.pop('readonly', None)
-kafeju.pop('type', None)
-print(json.dumps(kafeju))
-" > /tmp/agent-update.json
+   | Field | Value |
+   |-------|-------|
+   | **Tool ID** | `participant.YOUR_TOOL_NAME` (e.g. the suggested ID on your card) |
+   | **Type** | `ESQL` |
+   | **Description** | A sentence or two describing *when* the agent should call this tool. Be specific — this is routing logic for the AI. |
+   | **Labels** | `participant` (plus any others from the card, e.g. `cost`, `infrastructure`) |
+   | **ES\|QL Query** | Paste your query from Discover |
 
-curl -s -X PUT http://localhost:5601/api/agent_builder/agents/kafuju \
-  -u elastic:workshopAdmin1! \
-  -H "kbn-xsrf: true" \
-  -H "Content-Type: application/json" \
-  -d @/tmp/agent-update.json
-```
+4. Click **Save & Test** and **Submit**. Confirm the `tabular_data`
+   response has the columns you expect.
+5. Click **Save** to persist the tool.
+
+### Wire it into the Kafeju agent
+
+1. In Agent Builder, click the **Agents** tab.
+2. Open the **Kafeju** agent and click **Edit** (pencil icon).
+3. Scroll to the **Tools** section.
+4. Click **Add tool**, search for `participant`, and select your new
+   tool.
+5. Click **Save** (or **Update agent**).
 
 ## Test Your Tool
 
-Go to **Kibana > AI Assistant > Kafeju** and ask your test prompt. The
-agent should invoke your new tool and return structured results.
+Go to **Kibana > AI Assistant > Kafeju** and ask the **test prompt**
+from your card. Expand the **tool-call / reasoning panel** under
+Kafeju's answer and confirm `participant.YOUR_TOOL_NAME` was the
+tool that ran.
+
+> **If the agent picks a different tool:** revisit your tool's
+> **description** in Agent Builder. Add the exact phrasing a user
+> would use (e.g. *"Use when asked about regional pricing, cheapest
+> region, or region cost comparison"*). Description text is routing
+> logic — make it explicit.
 
 ## Check Your Work
 
-The check verifies that at least **two** participant tools exist (the
-zombie detector from Challenge 3 + your new tool).
+The automated check verifies that at least **two** participant tools
+exist (the zombie detector from Challenge 3 + your new tool) and that
+both are attached to the Kafeju agent.
+
+Before clicking **Check**, confirm in the UI:
+- The **Tools** tab shows your new `participant.*` tool.
+- The **Agents** tab > **Kafeju** page lists it alongside the
+  zombie detector.
+- Kafeju invoked your new tool in response to the card's test prompt.

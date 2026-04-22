@@ -78,19 +78,19 @@ Keep this query handy — you'll paste it into the tool in the next step.
   | **Type**        | `ESQL`                                                                                                                                                                                                                           |
   | **Description** | *Finds zombie VMs: machines with very low CPU usage (under 15%) that are wasting money. Shows which teams have idle resources ranked by total cost waste. Use when asked about zombie VMs, idle instances, or wasted resources.* |
   | **Labels**      | `participant`, `infrastructure`, `cost`                                                                                                                                                                                          |
-  | "ES|QL"         | Paste the exact query from Step 2                                                                                                                                                                                                |
+  | **ES\|QL Query**| Paste the exact query from Step 2                                                                                                                                                                                                |
 
   > **Why the description matters:** When Kafeju receives a question,
   > it scans every tool's description to decide which one to call.
   > The phrase *"Use when asked about zombie VMs, idle instances, or
   > wasted resources"* is routing signal — make it explicit.
-5. Click **Save** & **Test** to sanity-check the tool:
-  - This tool takes no inputs, so just click **Sumbit**.
-  - In the **Response** panel, expand the  entry and
-  confirm you see document with fields `avg_cpu`, `avg_drift`,
-  `total_cost`, `occurrences`, `metadata.team`,
-  `vm_info.vm_type_actual`, `resource_name`.
-  - The rows should match what you saw in Discover in Step 2.
+5. Click **Save & Test** to sanity-check the tool:
+   - This tool takes no inputs, so just click **Submit**.
+   - In the **Response** panel, expand the `tabular_data` entry and
+     confirm you see rows with columns `avg_cpu`, `avg_drift`,
+     `total_cost`, `occurrences`, `metadata.team`,
+     `vm_info.vm_type_actual`, `resource_name`.
+   - The rows should match what you saw in Discover in Step 2.
 6. Click **Save**.
 7. Verify the tool appears in the **Tools** list. Type `participant` in
   the filter — you should see `participant.find_zombie_vms`.
@@ -112,14 +112,14 @@ Agent Builder you attach tools to agents explicitly.
   agent is allowed to call.
 4. Click **Add tool** (or the search/filter box at the bottom of the
   list) and search for `participant`.
-5. Select `**participant.find_zombie_vms`** to attach it.
+5. Select **`participant.find_zombie_vms`** to attach it.
 6. Confirm it now appears in the Kafeju tools list alongside the
-  existing `kafeju.`* tools.
+   existing `kafeju.*` tools.
 7. Click **Save** (or **Update agent**).
 
 > **What you should see:** The Kafeju agent's tool list now includes
 > `participant.find_zombie_vms`. If the list previously had ~10
-> `kafeju.`* tools, it should now show 11.
+> `kafeju.*` tools, it should now show 11.
 >
 > **Why this step exists:** Creating a tool and attaching it to an
 > agent are two separate actions. A tool that isn't attached to any
