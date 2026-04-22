@@ -11,13 +11,6 @@
       "tools": [
         {
           "tool_ids": [
-            "platform.core.search",
-            "platform.core.list_indices",
-            "platform.core.get_index_mapping",
-            "platform.core.get_document_by_id",
-            "platform.core.execute_esql",
-            "platform.core.generate_esql",
-            "platform.core.index_explorer",
             "kafeju.analyze_vm_usage_patterns",
             "kafeju.calculate_cost_optimization_1",
             "kafeju.compare_team_request_vs_usage",

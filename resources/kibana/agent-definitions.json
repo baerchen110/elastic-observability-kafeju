@@ -16,11 +16,6 @@
       "tools": [
         {
           "tool_ids": [
-            "platform.core.search",
-            "platform.core.list_indices",
-            "platform.core.get_index_mapping",
-            "platform.core.get_document_by_id",
-            "platform.core.get_workflow_execution_status",
             "kafeju.analyze_vm_usage_patterns",
             "kafeju.calculate_cost_optimization_1",
             "kafeju.calculate_cost_per_instance_run",

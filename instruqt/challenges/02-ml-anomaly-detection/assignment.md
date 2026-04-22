@@ -348,16 +348,45 @@ FROM gcp-pricing-catalog
 > exists in the catalog. The agent *invented* a multi-region
 > comparison — the data can't support one. Confabulated.
 
-### Prompt B — zombie VMs (gap)
+### Prompt B — zombie VMs (gap by tool chaining)
 
 ```
 List zombie VMs: instances where P95 CPU < 10%, monthly cost > $200, and the execution has been running for more than 168 hours. Return the top 10 by cost.
 ```
 
-The agent will probably answer with a list of high-drift VMs. Check
-the tool-call panel: likely `kafeju.analyze_vm_usage_patterns` or
-`kafeju.detect_resource_anomalies` — **neither** filters on P95
-CPU, monthly cost, **and** duration together. Verify:
+This time Kafeju will probably **chain 3–5 `kafeju.*` tools** and
+hand you a very polished top-10 list where every VM is tagged
+*"P95 CPU < 10%"*, *"Monthly Cost > $200"*, and *"Execution
+Duration: >168 hours"*. It looks grounded. It isn't.
+
+Open the **Reasoning** panel and answer these three questions for
+yourself:
+
+1. **Which tool filtered on `execution_time.duration_hours > 168`?**
+   Read the ES|QL of every tool that ran. None of the `kafeju.*`
+   tools in the default kit actually queries that field — the
+   *"Execution Duration: >168 hours"* line in the final answer is
+   LLM-side prose, not data.
+
+2. **Which tool filtered on `resource_usage.cpu.p95_percent < 10`?**
+   Tools like `kafeju.analyze_vm_usage_patterns` and
+   `kafeju.get_vm_sizing_analysis` **rank by `combined_drift`**
+   and return P95 CPU as a *column*, but they don't `WHERE`-filter
+   on it. The LLM keeps rows that "happen" to have P95 CPU < 10 and
+   quietly ignores rows that don't. Scroll the final answer — can
+   you spot a VM with **P95 CPU > 10%** still tagged as a zombie
+   with a hand-waved *"P1 / slightly above threshold"* note? That's
+   a direct criterion violation the agent smoothed over in prose.
+
+3. **Which tool returned `monthly cost > $200` for the *actual* VM
+   instance?** `kafeju.get_instance_cost_and_specs` returns the
+   pricing-catalog **list price per machine type** (e.g. `$567` for
+   `n2-standard-16`). That's the price of the *template*, not the
+   billed cost for that specific VM over its real execution time.
+   The LLM re-labels the template price as each VM's *"Monthly
+   Cost"*.
+
+Now verify the real answer with a single ES|QL in Discover:
 
 ```esql
 FROM gcp-resource-executions-*
@@ -370,16 +399,24 @@ FROM gcp-resource-executions-*
 | LIMIT 10
 ```
 
-> **What you should see:** The real zombie list is likely very
-> different from what Kafeju narrated. Confabulated — no tool
-> computes this.
+> **What you should see:** The real zombie list is usually much
+> **shorter** (or empty for some filter combos) than Kafeju's
+> list, and the VMs / costs will differ. Confabulation by **tool
+> chaining + prose stitching** — no single tool actually filters
+> on what you asked.
 
 ### Takeaway
 
-In both prompts the agent didn't error — it just *improvised*
-because no tool in the toolbox answers the question. In Challenges 3
-and 4 you will build the missing tools so these questions become
-grounded.
+The gap isn't *"the agent can't answer"* — the agent is very
+willing to answer. The gap is that **no single tool applies the
+user's filter**, so the agent chains several tools, fills the
+missing filter in prose, and even **violates its own stated
+criteria** when the data doesn't match (the P95-CPU-14%-still-a-
+zombie tell).
+
+The only robust fix is a dedicated tool whose **ES|QL itself
+applies the filter** — which is exactly what you'll build in
+Challenge 3 (a real zombie-VM tool) and design in Challenge 4.
 
 ---
 

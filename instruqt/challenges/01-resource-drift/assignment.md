@@ -54,24 +54,11 @@ Kafeju agent and find where its current tools fall short.
 
 ---
 
-## Step 1: Log In
-
-1. Open the **Kibana** tab.
-2. Log in with: `elastic` / `workshopAdmin1!`.
-3. Set the time picker (top-right) to **Last 1 year**. The workshop
-   dataset spans roughly 12 months, so shorter ranges will look empty.
-
-> **What to notice:** Every screen in this challenge should use
-> *Last 1 year* as the time range. If a dashboard or Discover view
-> looks blank, check the time picker first.
-
----
-
-## Step 2: Explore the Data in Discover
+## Step 1: Explore the Data in Discover
 
 Before asking an AI anything, *you* should know what data exists.
 
-1. Open the hamburger menu > **Analytics** > **Discover**.
+1. Open the **Kibana** tab
 2. In the data view selector (top-left), pick **GCP Resource
    Executions**.
 3. Expand one document and skim these fields:
@@ -100,13 +87,13 @@ Before asking an AI anything, *you* should know what data exists.
 
 ---
 
-## Step 3: Tour the Pre-Built Dashboards
+## Step 2: Tour the Pre-Built Dashboards
 
 Now let's see the same data visually. Open the hamburger menu >
 **Analytics** > **Dashboard** and open each dashboard in turn. (Make
 sure the time picker is still on **Last 1 year**.)
 
-### 3a. GCP Resource Drift Overview
+### 2a. GCP Resource Drift Overview
 
 Panels show:
 - Average drift % across the fleet
@@ -116,7 +103,7 @@ Panels show:
 > and a few machine types dominate the waste. These are the exact VMs
 > a cost-optimization agent should flag first.
 
-### 3b. Cost Optimization Opportunities
+### 2b. Cost Optimization Opportunities
 
 Panels show:
 - Total compute cost and cost by team
@@ -139,7 +126,7 @@ Panels show:
 
 ---
 
-## Step 4: Meet Kafeju — Ask What It *Can* Do
+## Step 3: Meet Kafeju — Ask What It *Can* Do
 
 With the data fresh in your mind, let's see the agent in action.
 
@@ -175,7 +162,7 @@ tool ID in the reasoning panel.
 
 ---
 
-## Step 5: Find the Gap
+## Step 4: Find the Gap
 
 Now ask two questions that *sound* reasonable. Kafeju will give you
 **confident-looking answers to both** — but for each one, expand the
@@ -256,17 +243,21 @@ needed.
    - a **description** (how the agent decides when to use it),
    - a **configuration** that contains an **ES|QL query** (the actual
      work).
-5. Go back and open the **Tools** tab. Scan the full list and group
-   them mentally:
-   - IDs starting with **`kafeju.`** → **custom** ES|QL tools made for
-     this workshop.
-   - IDs starting with **`platform.core.`** (or similar built-in
-     prefixes) → tools that ship with Kibana out of the box.
+5. Go back and open the **Tools** tab. Notice that **every tool
+   attached to Kafeju starts with `kafeju.`** — there are no
+   generic `platform.core.*` search / ES|QL tools in this agent.
+   This is deliberate: in Agent Builder you *can* hand an agent a
+   generic "search any index / run any ES|QL" escape hatch, but
+   Kafeju has been **scoped on purpose** to only the custom
+   workshop tools. That's what makes the gaps in Step 5 actually
+   show up — with an escape-hatch tool, the agent would silently
+   fall back to generic search and hide the gap.
 
 > **What to notice:**
-> - Count the `kafeju.*` tools — that's Kafeju's *real* capability
->   surface. If a question can't be answered with one of these
->   tools (plus the built-ins), Kafeju can't answer it reliably.
+> - The list of `kafeju.*` tools *is* Kafeju's capability surface.
+>   If a question can't be answered with one of these tools, Kafeju
+>   can't answer it reliably — which is exactly what you just saw
+>   in Step 5.
 > - Every `kafeju.*` tool is just an ES|QL query with a description.
 >   In the next challenges you will read one of these queries line by
 >   line, then write your own.
