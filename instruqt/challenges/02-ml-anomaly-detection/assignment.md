@@ -74,15 +74,18 @@ ML UI, then follow the same results all the way to a Kafeju answer.
 > heavy-lifting. You don't need to invent an anomaly algorithm for
 > Kafeju — you just need a tool that reads the ML output.
 
-To make these ML results easy for tools (and ES|QL) to consume, they
-have been post-processed into two indices:
+Where do the results live?
 
-- `ml-predictions-anomalies*` — one doc per anomaly record
-  (`record_score`, `severity`, `vm_id`, `team`, `actual`, `typical`…).
-- `ml-predictions-growth` — one doc per team
-  (`growth_rate_daily`, `predicted_days_to_90pct`…).
+- Anomaly-detection jobs (`resource-usage-anomalies`,
+  `vm-capacity-planning`) write their results to Elastic's built-in
+  ML results index, **`.ml-anomalies-*`**. That's the same index
+  Anomaly Explorer reads from — and it's what the Kafeju anomaly
+  tool will query with ES|QL in a moment.
+- Growth / capacity forecasts (`workload-growth-rate`) are
+  post-processed into **`ml-predictions-growth`** for a simpler
+  per-team shape.
 
-You'll see those indices in action in the next steps.
+You'll see `.ml-anomalies-*` in action in the next steps.
 
 ---
 
@@ -103,47 +106,70 @@ You'll see those indices in action in the next steps.
    - `actual` — what the VM's CPU/memory actually was in that bucket.
    - `typical` — what the model expected, based on peer VMs and
      history.
-   - `record_score` — severity (0–100).
+   - `anomaly_score` — severity (0–100).
 
 > **What you should see:** One or two VMs/teams dominating the
 > anomalies, with `actual` values far above `typical` (e.g. 95% CPU
-> when the model expected ~15%). A `record_score` above 75 is
-> "critical"; 50–75 is "major"; 25–50 is "minor".
+> when the model expected ~15%). Using the same thresholds the
+> Kafeju tool applies, an `anomaly_score` ≥ 75 is **CRITICAL**,
+> ≥ 50 is **HIGH**, ≥ 25 is **MEDIUM**, below that is **LOW**.
 >
 > **Why it matters:** This is the ground truth. Any question a user
-> asks Kafeju like *"which VMs are behaving weirdly?"* should come
-> back with roughly the same VMs you're looking at right now.
+> asks Kafeju like *"when is the ML model seeing unusual activity?"*
+> should come back with time buckets and severities that match what
+> you're looking at right now.
 
-### 2b. Same data, from Discover
+### 2b. Same data, from Discover + ES|QL
+
+Anomaly Explorer is great for humans, but tools speak ES|QL. The ML
+results live in the system index `.ml-anomalies-*`. Let's peek at
+one raw document.
 
 1. Open the hamburger menu > **Analytics** > **Discover**.
-2. Select the data view **`ml-predictions-anomalies-workshop`**.
-3. Expand one document and find these fields:
+2. Click the data-view selector (top-left) and switch to
+   **ES|QL mode** (the toggle at the top of Discover).
+3. Run this small query — it's a slimmed-down version of what the
+   Kafeju tool will run in Step 3:
 
-| Field | What it means |
-|-------|--------------|
-| `record_score` | Anomaly severity (0–100), same as Anomaly Explorer |
-| `severity` | Text bucket — `critical` / `major` / `minor` |
-| `vm_id`, `vm_type`, `team` | Which VM / team produced the anomaly |
-| `actual` vs `typical` | Observed value vs ML-expected value |
-| `function_description` | Which detector fired (e.g. `high mean`) |
+   ```esql
+   FROM .ml-anomalies-*
+   | WHERE job_id == "vm-capacity-planning"
+     AND result_type == "bucket"
+     AND anomaly_score > 0
+     AND is_interim == false
+   | SORT anomaly_score DESC
+   | KEEP timestamp, job_id, result_type, anomaly_score, event_count, bucket_span
+   | LIMIT 20
+   ```
 
-> **What you should see:** The same VMs that were red in Anomaly
-> Explorer appear here as top-scoring documents. Exploring in Discover
-> is uglier than the ML UI, but — critically — it can be expressed as
-> an ES|QL query. That's what makes it usable by an Agent Builder
-> tool.
+   Key fields:
+
+   | Field | What it means |
+   |-------|--------------|
+   | `job_id` | Which ML job wrote this row (here, `vm-capacity-planning`) |
+   | `result_type` | `bucket`, `record`, or `influencer` — the ML API returns different shapes |
+   | `anomaly_score` | Bucket-level severity (0–100) |
+   | `is_interim` | `true` while a bucket is still being finalized — filter these out |
+   | `timestamp` | Start of the 1-hour bucket |
+   | `event_count`, `bucket_span` | How much data this bucket saw, and its span |
+
+> **What you should see:** The top-scoring buckets line up with the
+> red blocks you saw in the Overall swim lane. Notice what's *not*
+> in the result: no `vm_id`, no `team`. Bucket-level rows are the
+> overall model score for that hour, aggregated across all VMs — so
+> "which VM" is a separate question. Keep that in mind for Step 4.
 
 ---
 
 ## Step 3: Dissect the ML Tool in the Agent Builder UI (~5 min)
+
 
 Now let's see how Kafeju consumes those predictions.
 
 1. Hamburger menu > **Agent Builder**. (Depending on the build it may
    sit under **Management** > **Agent Builder**.)
 2. Click the **Tools** tab.
-3. In the filter box, type `detect_resource_anomalies` and open the
+3. In the filter box, type `anomalies` and open the
    tool **`kafeju.detect_resource_anomalies`**.
 4. In the detail view, identify the three parts every Agent Builder
    tool has:
@@ -154,18 +180,61 @@ Now let's see how Kafeju consumes those predictions.
      predictions…"*. This is **routing logic**: the AI reads it to
      decide whether this tool is the right one for the user's
      question.
-   - **Configuration > ES|QL query** — a query against
-     `ml-predictions-anomalies*` that filters `record_score > 25`,
-     sorts by score, and keeps the fields you just saw in Discover.
+   - **Configuration > ES|QL query** — the real query the tool
+     runs. It should look like this:
+
+     ```esql
+     FROM .ml-anomalies-*
+     | WHERE job_id == "vm-capacity-planning"
+       AND result_type == "bucket"
+       AND anomaly_score > 0
+       AND is_interim == false
+     | EVAL
+         anomaly_date = DATE_FORMAT("yyyy-MM-dd HH:mm", timestamp),
+         severity_level = CASE(
+             anomaly_score >= 75, "CRITICAL",
+             anomaly_score >= 50, "HIGH",
+             anomaly_score >= 25, "MEDIUM",
+             "LOW"
+         )
+     | SORT anomaly_score DESC
+     | KEEP anomaly_date, severity_level, anomaly_score,
+            event_count, bucket_span
+     | LIMIT 20
+     ```
+
+Read it line by line:
+
+- `FROM .ml-anomalies-*` — same index you queried in Step 2b.
+- `WHERE job_id == "vm-capacity-planning"` — **the tool only looks
+  at one job**, not all four. Anomalies from `resource-usage-anomalies`
+  will not show up here.
+- `result_type == "bucket"` — bucket-level only (no per-record or
+  per-influencer rows). That's why there are no `vm_id` / `team`
+  columns in the output.
+- `is_interim == false` — drop buckets the ML engine hasn't finalized.
+- `EVAL` — formats the timestamp and converts the numeric
+  `anomaly_score` into a human-readable `severity_level` using
+  the same thresholds you noted in Step 2a.
+- `KEEP` + `LIMIT 20` — return at most 20 rows, each one a
+  time bucket with its severity.
 
 > **What you should see:** The query reads from the **same index**
-> you browsed in Step 2b, and returns the **same fields** you saw on
-> an anomaly document. Nothing magical — it's plain ES|QL.
+> you browsed in Step 2b, and the `EVAL` turns the raw score into the
+> same `CRITICAL / HIGH / MEDIUM / LOW` ladder Anomaly Explorer hints
+> at. Nothing magical — it's plain ES|QL.
 >
 > **Why it matters:** An Agent Builder tool is *just* ID +
 > description + ES|QL. No model re-training, no streaming, no custom
 > code. That's the entire surface area you'll use for the rest of
 > the workshop.
+>
+> **What to notice about this specific tool:** It only covers the
+> `vm-capacity-planning` job, and it returns *bucket-level*
+> severity — **not** a list of offending VMs or teams. That's a
+> real limitation: when a user asks *"which VM is unusual?"*, this
+> tool literally cannot answer. It can only answer *"when was the
+> model unusually alarmed?"*. You'll feel this gap in Step 4.
 
 While you're in the Tools tab, also spot **`kafeju.predict_resize_needs`**
 — it follows the same pattern, but reads from `ml-predictions-growth`
@@ -184,28 +253,40 @@ Time to connect the ML UI, the ES|QL tool, and the agent.
 1. **Copy** the ES|QL query from the tool detail pane in Step 3.
 2. Open **Discover** and switch to **ES|QL mode** (the toggle at the
    top of Discover).
-3. **Paste and run** the query. You should get a table of the
-   highest-scoring anomalies.
+3. **Paste and run** the query. You should get up to 20 rows, each
+   one a 1-hour bucket with `anomaly_date`, `severity_level`,
+   `anomaly_score`, `event_count`, `bucket_span`.
 4. Now click the **AI Assistant** icon (✨) and switch to the
    **Kafeju** agent.
-5. Ask:
+5. Ask a question the tool can actually answer:
 
-> **"Which VMs have the most unusual resource usage right now? Show
-> me the top anomalies."**
+> **"When has the ML model seen the most unusual activity on our
+> VM fleet? Give me the top anomaly windows and their severity."**
 
 6. When Kafeju answers, expand the **tool-call / reasoning panel**
    under the answer and confirm that `kafeju.detect_resource_anomalies`
    was the tool that ran.
 
 > **What you should see:** Three views of the same ML result:
-> - **Anomaly Explorer** (Step 2a) — human-friendly swim lanes.
-> - **Discover > ES|QL** (Step 4) — structured rows, same top VMs.
-> - **Kafeju** — a natural-language summary that names the *same*
->   VMs and teams.
+> - **Anomaly Explorer** (Step 2a) — human-friendly swim lanes,
+>   red blocks at the same times.
+> - **Discover > ES|QL** (Step 3/4) — the same top buckets as
+>   structured rows, with `CRITICAL` / `HIGH` labels.
+> - **Kafeju** — a natural-language summary of those same time
+>   windows.
 >
-> All three should agree. If the agent's narrative names a VM that
-> isn't in your ES|QL result, the tool or the agent is lying. That's
-> the next step.
+> All three should agree on *when* the anomalies happened. If the
+> agent starts naming specific VMs (e.g. *"vm-web-03 spiked to 98%
+> CPU"*), be suspicious: the tool's output doesn't contain any
+> `vm_id` column. Anything VM-specific was either invented by the
+> model or came from a different tool call.
+>
+> Try a follow-up and feel the gap:
+>
+> > **"Which specific VM was responsible for those anomalies?"**
+>
+> `kafeju.detect_resource_anomalies` cannot answer this from its
+> current ES|QL. The next step turns that pain into a lesson.
 
 ---
 
@@ -287,16 +368,18 @@ Before clicking **Check**, confirm:
 - I opened the **Anomaly Detection Jobs** page and can name at
   least 2 of the 4 ML jobs and what each one scores.
 - I used **Anomaly Explorer** to inspect at least one
-  high-severity anomaly (`record_score` > 75) and noted the
+  high-severity anomaly (`anomaly_score` ≥ 75) and noted the
   `actual` vs `typical` values.
 - I opened **`kafeju.detect_resource_anomalies`** in the Agent
   Builder UI and can state its 3 components (ID, description,
-  ES|QL query) plus the index it reads from.
-- I ran that ES|QL in **Discover > ES|QL mode** and the top VMs
-  matched the ones I saw in Anomaly Explorer.
-- I asked Kafeju the anomaly question, confirmed the right tool
-  was called in the tool-call panel, and saw the same VMs in the
-  narrative.
+  ES|QL query), the index it reads from (`.ml-anomalies-*`), and
+  that it's scoped to `job_id == "vm-capacity-planning"` and
+  `result_type == "bucket"`.
+- I ran that ES|QL in **Discover > ES|QL mode** and the top
+  anomaly windows matched the red blocks in Anomaly Explorer.
+- I asked Kafeju the "when" anomaly question, confirmed the
+  right tool was called in the tool-call panel, and noticed the
+  tool cannot answer "which VM".
 - For Prompts A and B in Step 5, I inspected the tool-call panel
   and used the provided ES|QL to prove the answer was
   confabulated.
