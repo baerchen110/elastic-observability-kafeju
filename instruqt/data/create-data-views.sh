@@ -19,56 +19,17 @@ DATA_VIEW_LINES=(
   'workshop-all-ml:ml-predictions-*|@timestamp|All ML Predictions'
 )
 
-# Build a whitelist of canonical IDs so the cleanup pass below can skip them.
+# Build a whitelist of canonical IDs and delegate the prune to the shared
+# helper (same script is re-run by Challenge 1's setup.sh for belt + suspenders).
 KEEP_IDS=()
 for entry in "${DATA_VIEW_LINES[@]}"; do
   KEEP_IDS+=("${entry%%:*}")
 done
 
-echo "Pruning non-workshop data views (keeping ${#KEEP_IDS[@]} canonical)..."
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 KEEP_IDS_CSV="$(IFS=,; echo "${KEEP_IDS[*]}")" \
   KIBANA_URL="$KIBANA_URL" ES_USER="$ES_USER" ES_PASS="$ES_PASS" \
-  python3 - <<'PYEOF'
-import json
-import os
-import subprocess
-
-kibana = os.environ["KIBANA_URL"]
-auth = f'{os.environ["ES_USER"]}:{os.environ["ES_PASS"]}'
-keep = set(os.environ["KEEP_IDS_CSV"].split(","))
-
-# List all data views.
-r = subprocess.run(
-    ["curl", "-sS", "-u", auth, "-H", "kbn-xsrf: true",
-     f"{kibana}/api/data_views"],
-    capture_output=True, text=True,
-)
-try:
-    views = json.loads(r.stdout).get("data_view", [])
-except Exception:
-    print(f"  WARN: could not list data views ({r.stdout[:120]})")
-    views = []
-
-deleted = 0
-skipped = 0
-for v in views:
-    vid = v.get("id", "")
-    if vid in keep:
-        skipped += 1
-        continue
-    d = subprocess.run(
-        ["curl", "-sS", "-o", "/dev/null", "-w", "%{http_code}",
-         "-X", "DELETE", "-u", auth, "-H", "kbn-xsrf: true",
-         f"{kibana}/api/data_views/data_view/{vid}"],
-        capture_output=True, text=True,
-    )
-    if d.stdout.strip() in ("200", "204", "404"):
-        deleted += 1
-    else:
-        print(f"  WARN: failed to delete {vid} (HTTP {d.stdout.strip()})")
-
-print(f"  Kept {skipped}, deleted {deleted}.")
-PYEOF
+  bash "$SCRIPT_DIR/prune-data-views.sh"
 
 any_failed=0
 
