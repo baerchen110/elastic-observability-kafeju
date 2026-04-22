@@ -55,7 +55,7 @@
     "description": "Predicts when teams will hit 90% CPU capacity based on growth trends. Shows growth rate, days until threshold, and resize recommendations. Use when asked: 'Which teams need resizing?', 'Predict capacity needs', or 'When will we run out of capacity?'.",
     "tags": ["kafeju", "infrastructure", "ml", "capacity"],
     "configuration": {
-      "query": "FROM ml-predictions-growth\n| KEEP @timestamp, team, current_avg_cpu, growth_rate_daily, predicted_days_to_90pct, recommendation\n| SORT predicted_days_to_90pct ASC\n| LIMIT 20",
+      "query": "FROM ml-predictions-growth-*\n| KEEP @timestamp, team, current_avg_cpu, growth_rate_daily, predicted_days_to_90pct, recommendation\n| SORT predicted_days_to_90pct ASC\n| LIMIT 20",
       "params": {}
     }
   },

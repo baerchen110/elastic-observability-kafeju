@@ -72,8 +72,9 @@ Kafeju agent and find where its current tools fall short.
 Before asking an AI anything, *you* should know what data exists.
 
 1. Open the hamburger menu > **Analytics** > **Discover**.
-2. In the data view selector (top-left), pick
-   **`gcp-resource-executions-*`**.
+2. In the data view selector (top-left), pick the
+   **GCP Resource Executions** data view (underlying index:
+   `gcp-resource-executions-*`).
 3. Expand one document and skim these fields:
 
 | Field | What it means |
@@ -85,11 +86,12 @@ Before asking an AI anything, *you* should know what data exists.
 | `drift_metrics.combined_drift_score` | % of allocated resources that are *not* being used |
 | `cost_actual.total_cost_usd` | Cost of that execution |
 
-4. Now switch the data view to **`gcp-pricing-catalog`** and expand a
-   document. Note how each machine type has an hourly price per region.
-5. Switch once more to **`ml-predictions-anomalies-workshop`**. Each
-   record has a `record_score` (how anomalous) and the VM / team it
-   belongs to.
+4. Now switch the data view to **GCP Pricing Catalog** (index:
+   `gcp-pricing-catalog`) and expand a document. Note how each
+   machine type has an hourly price per region.
+5. Switch once more to **ML Anomalies** (index:
+   `ml-predictions-anomalies-*`). Each record has a `record_score`
+   (how anomalous) and the VM / team it belongs to.
 
 > **What to notice:** Three *independent* datasets tell you the story —
 > actual usage, pricing, and ML anomaly scores. A good agent tool has

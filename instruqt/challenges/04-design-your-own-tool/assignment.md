@@ -87,11 +87,11 @@ data doesn't support a multi-region ranking.
 
 **Business question:** "Show me weekly cost trends per team."
 
-**Index:** `gcp-billing-actual`
+**Index:** `gcp-billing-*` (data view: **GCP Billing**)
 
 **Explore first:**
 ```sql
-FROM gcp-billing-actual
+FROM gcp-billing-*
 | LIMIT 5
 ```
 
@@ -112,7 +112,7 @@ FROM gcp-billing-actual
 <summary><strong>Example ES|QL solution</strong> (click to reveal — instructor hint)</summary>
 
 ```sql
-FROM gcp-billing-actual
+FROM gcp-billing-*
 | EVAL week = DATE_TRUNC(7 days, @timestamp)
 | STATS total_cost = SUM(billing.cost.amount)
     BY gcp.labels.team, week
@@ -128,22 +128,25 @@ FROM gcp-billing-actual
 
 **Business question:** "Which teams will need more capacity soonest?"
 
-**Index:** `ml-predictions-growth-summary`
+**Index:** `ml-predictions-growth-*` (data view: **ML Growth Predictions**)
 
 **Explore first:**
 ```sql
-FROM ml-predictions-growth-summary
+FROM ml-predictions-growth-*
 | LIMIT 10
 ```
 
-**Useful fields:** `team`, `workload_type`,
-`growth_rate_percent_per_week`, `weeks_until_90_percent_capacity`,
-`recommendation`, `confidence`
+**Useful fields:** `team`, `current_avg_cpu`, `growth_rate_daily`,
+`predicted_days_to_90pct`, `recommendation`
 
 **Hints:**
-- Filter where `weeks_until_90_percent_capacity` is small (< 20)
-- Sort by `weeks_until_90_percent_capacity ASC` (most urgent first)
-- Include `recommendation` and `confidence` in output
+- Filter where `predicted_days_to_90pct` is small (e.g. `< 60`) —
+  most urgent first
+- Sort by `predicted_days_to_90pct ASC`
+- Include `recommendation` (values include `URGENT_RESIZE`,
+  `PLAN_RESIZE`, `MONITOR`)
+- `growth_rate_daily` is a fractional daily growth rate (e.g. `0.12`
+  = 12% per day). Multiply by 100 to show a percentage.
 
 **Suggested tool ID:** `participant.capacity_forecast`
 
@@ -153,13 +156,23 @@ FROM ml-predictions-growth-summary
 <summary><strong>Example ES|QL solution</strong> (click to reveal — instructor hint)</summary>
 
 ```sql
-FROM ml-predictions-growth-summary
-| WHERE weeks_until_90_percent_capacity < 20
-| KEEP team, workload_type, growth_rate_percent_per_week,
-       weeks_until_90_percent_capacity, recommendation, confidence
-| SORT weeks_until_90_percent_capacity ASC
+FROM ml-predictions-growth-*
+| WHERE predicted_days_to_90pct < 60
+| STATS latest_days = MIN(predicted_days_to_90pct),
+        latest_growth = AVG(growth_rate_daily),
+        latest_cpu    = AVG(current_avg_cpu),
+        latest_reco   = VALUES(recommendation)
+    BY team
+| EVAL growth_pct_per_day = ROUND(latest_growth * 100, 2)
+| KEEP team, latest_cpu, growth_pct_per_day, latest_days, latest_reco
+| SORT latest_days ASC
 | LIMIT 20
 ```
+
+Note: the growth index has one document per (team, day) snapshot.
+The `STATS ... BY team` pass collapses the snapshots into one row
+per team with the most-urgent days-to-90% and the latest
+recommendation.
 
 </details>
 
