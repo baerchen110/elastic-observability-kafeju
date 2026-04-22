@@ -177,31 +177,66 @@ tool ID in the reasoning panel.
 
 ## Step 5: Find the Gap
 
-Now ask two questions that *sound* reasonable but that Kafeju's current
-toolbox can't properly answer:
+Now ask two questions that *sound* reasonable. Kafeju will give you
+**confident-looking answers to both** — but for each one, expand the
+**Reasoning** / tool-call panel and check *which tool ran, and what
+ES|QL it actually executed*. The gap isn't "no answer"; it's a
+confident answer that doesn't really answer your question.
+
+### Prompt A — regional pricing
 
 ```
 Which GCP region is cheapest for n2-standard-8 instances?
 ```
 
+Kafeju will likely answer with a specific region and price (e.g.
+*"us-central1, ~$283/month — the lowest price for this machine
+type"*). Expand the reasoning panel and look at the ES|QL:
+
+- The pricing catalog in this workshop only contains **one region**
+  (`us-central1`). The query isn't ranking regions against each
+  other — there's nothing to rank against. Kafeju re-narrates the
+  single row it got back as if it were the winner of a multi-region
+  comparison.
+
+You'll drill into this exact prompt again in Challenge 2 and see the
+one-line ES|QL that proves it.
+
+### Prompt B — zombie VMs
+
 ```
 Find zombie VMs — which expensive instances are sitting idle for weeks?
 ```
 
-Kafeju will either:
-- hallucinate a plausible-sounding answer,
-- give a generic non-answer, or
-- apologize that it doesn't have the right data.
+You'll likely get a polished list (something like *"Search Indexer
+(n2-standard-16): 88.5% drift, avg CPU 8%, P95 CPU 15%…"*). Expand
+the reasoning panel and look at the ES|QL:
 
-> **What to notice:** The data to answer both questions *is already in
-> the cluster* — pricing lives in **GCP Pricing Catalog**, idle VMs
-> live in **GCP Resource Executions**. What's missing is a **tool**
-> that knows how to query them. You will fix that in Challenges 3
-> and 4.
+- The tool Kafeju picks (typically **`kafeju.analyze_vm_usage_patterns`**)
+  just **ranks by drift** — it does **not** enforce a real zombie
+  definition like *P95 CPU < 10% **and** monthly cost > $X **and**
+  idle for > 168 hours*. The result looks zombie-like here because
+  the underlying data happens to contain idle VMs — the same tool
+  would happily return a "zombie" list even on a fleet of heavy
+  users (it would just surface whichever rows drift the most).
 
-**Key insight:** An agent's capability is bounded by its tools. No
-regional-pricing tool → no regional-pricing answers. No
-zombie-detection tool → the agent guesses.
+> **What to notice:** The data to answer both questions is already in
+> the cluster — pricing lives in **GCP Pricing Catalog**, idle VMs
+> live in **GCP Resource Executions**. What's missing is a tool whose
+> ES|QL actually matches the question:
+>
+> - No tool ranks prices **across regions**.
+> - No tool applies the strict **zombie** definition (idle P95 CPU
+>   **and** expensive **and** long-running).
+>
+> You'll build the zombie-detection tool in Challenge 3 and design
+> more tools in Challenge 4.
+
+**Key insight:** The biggest risk with a tool-driven agent isn't "no
+answer" — it's a **confident answer that's subtly wrong**, because
+the LLM will narrate whatever the tool returns as if it fully
+answered your question. Always open the **Reasoning** panel and
+check the tool's ES|QL against your actual intent.
 
 ---
 
