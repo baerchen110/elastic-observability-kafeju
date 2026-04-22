@@ -64,6 +64,26 @@ FROM gcp-pricing-catalog
 
 **Test prompt:** "Which GCP region is cheapest for running VMs?"
 
+<details>
+<summary><strong>Example ES|QL solution</strong> (click to reveal — instructor hint)</summary>
+
+```sql
+FROM gcp-pricing-catalog
+| STATS avg_hour_usd  = AVG(cost_per_hour_usd),
+        avg_month_usd = AVG(cost_per_month_usd),
+        machine_types = COUNT_DISTINCT(machine_type)
+    BY region
+| SORT avg_hour_usd ASC
+| LIMIT 20
+```
+
+Note: in the workshop dataset the catalog may only contain one region
+(`us-central1`). The query is still correct — it just returns a single
+row. That's itself a useful lesson: the tool is shaped right, but the
+data doesn't support a multi-region ranking.
+
+</details>
+
 ---
 
 ## Challenge Card B: Weekly Cost Trends (Difficulty: 2 stars)
@@ -91,6 +111,20 @@ FROM gcp-billing-actual
 
 **Test prompt:** "Show me weekly cost trends per team."
 
+<details>
+<summary><strong>Example ES|QL solution</strong> (click to reveal — instructor hint)</summary>
+
+```sql
+FROM gcp-billing-actual
+| EVAL week = DATE_TRUNC(7 days, @timestamp)
+| STATS total_cost = SUM(billing.cost.amount)
+    BY gcp.labels.team, week
+| SORT week DESC, total_cost DESC
+| LIMIT 50
+```
+
+</details>
+
 ---
 
 ## Challenge Card C: Growth Predictions (Difficulty: 2 stars)
@@ -117,6 +151,20 @@ FROM ml-predictions-growth-summary
 **Suggested tool ID:** `participant.capacity_forecast`
 
 **Test prompt:** "Which teams will need more capacity soonest?"
+
+<details>
+<summary><strong>Example ES|QL solution</strong> (click to reveal — instructor hint)</summary>
+
+```sql
+FROM ml-predictions-growth-summary
+| WHERE weeks_until_90_percent_capacity < 20
+| KEEP team, workload_type, growth_rate_percent_per_week,
+       weeks_until_90_percent_capacity, recommendation, confidence
+| SORT weeks_until_90_percent_capacity ASC
+| LIMIT 20
+```
+
+</details>
 
 ---
 
@@ -148,6 +196,27 @@ FROM gcp-resource-executions-*
 
 **Test prompt:** "How much is each team overspending compared to actual
 usage?"
+
+<details>
+<summary><strong>Example ES|QL solution</strong> (click to reveal — instructor hint)</summary>
+
+```sql
+FROM gcp-resource-executions-*
+| STATS total_cost = SUM(cost_actual.total_cost_usd),
+        avg_drift  = AVG(drift_metrics.combined_drift_score),
+        avg_cpu    = AVG(resource_usage.cpu.avg_percent),
+        avg_mem    = AVG(resource_usage.memory.avg_percent)
+    BY metadata.team
+| EVAL waste_usd = total_cost * avg_drift / 100
+| SORT waste_usd DESC
+| LIMIT 15
+```
+
+The `EVAL waste_usd = total_cost * avg_drift / 100` step estimates the
+dollars each team is spending on resources they aren't using — the
+headline number the agent will narrate back.
+
+</details>
 
 ---
 
