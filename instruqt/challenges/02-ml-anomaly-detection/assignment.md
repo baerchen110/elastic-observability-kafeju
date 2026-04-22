@@ -246,40 +246,65 @@ While you're in the Tools tab, also spot **`kafeju.predict_resize_needs`**
 
 ---
 
-## Step 4: Run the Query Yourself and Ask Kafeju (~5 min)
+## Step 4: Run the Tool Two Ways (~5 min)
 
-Time to connect the ML UI, the ES|QL tool, and the agent.
+You've already read the tool's ES|QL. Now run the tool and see what
+it actually returns — first on its own (via Agent Builder's Test
+panel), then indirectly through a natural question to Kafeju — and
+check that both paths agree with the ML UI from Step 2.
 
-1. **Copy** the ES|QL query from the tool detail pane in Step 3.
-2. Open **Discover** and switch to **ES|QL mode** (the toggle at the
-   top of Discover).
-3. **Paste and run** the query. You should get up to 20 rows, each
-   one a 1-hour bucket with `anomaly_date`, `severity_level`,
-   `anomaly_score`, `event_count`, `bucket_span`.
-4. Now click the **AI Assistant** icon (✨) and switch to the
+### 4a. Run the tool from Agent Builder (Test button)
+
+You don't need to leave the tool detail page from Step 3 — Agent
+Builder can execute it directly.
+
+1. On the `kafeju.detect_resource_anomalies` detail page, click the
+   **Test** button (top-right).
+2. This tool has no inputs, so just click **Submit**.
+3. Expand the **Response** panel. You'll see two entries:
+   - `type: "query"` — the exact ES|QL that ran.
+   - `type: "tabular_data"` — the result rows. Inspect the
+     `columns` array and confirm they're exactly what the `KEEP`
+     clause declared: `anomaly_date` (keyword), `severity_level`
+     (keyword), `anomaly_score` (double), `event_count` (long),
+     `bucket_span`.
+
+> **Why it matters:** The Test button is the fastest way to
+> sanity-check a tool while you build it. The rows here should
+> line up with the red blocks you saw in Anomaly Explorer in Step
+> 2a — same ML job, same buckets, just a different UI.
+
+### 4b. Ask Kafeju a natural question
+
+Now pretend you're a platform engineer who has never heard of
+`.ml-anomalies-*` or `kafeju.detect_resource_anomalies`. You just
+want to know if anything weird is going on.
+
+1. Click the **AI Assistant** icon (✨) and switch to the
    **Kafeju** agent.
-5. Ask a question the tool can actually answer:
+2. Ask a plain, everyday question:
 
-> **"When has the ML model seen the most unusual activity on our
-> VM fleet? Give me the top anomaly windows and their severity."**
+> **"Is anything unusual happening on our VMs lately?"**
 
-6. When Kafeju answers, expand the **tool-call / reasoning panel**
-   under the answer and confirm that `kafeju.detect_resource_anomalies`
-   was the tool that ran.
+3. When Kafeju answers, expand the **tool-call / reasoning panel**
+   under the answer. You should see `kafeju.detect_resource_anomalies`
+   chosen automatically — the agent picked it from the **tool
+   description** alone. The rows under that tool call should
+   match what you got in 4a.
 
 > **What you should see:** Three views of the same ML result:
 > - **Anomaly Explorer** (Step 2a) — human-friendly swim lanes,
->   red blocks at the same times.
-> - **Discover > ES|QL** (Step 3/4) — the same top buckets as
->   structured rows, with `CRITICAL` / `HIGH` labels.
-> - **Kafeju** — a natural-language summary of those same time
->   windows.
+>   red blocks at the anomalous times.
+> - **Agent Builder Test** (4a) — the tool's raw tabular output,
+>   with `CRITICAL` / `HIGH` severity labels.
+> - **Kafeju** (4b) — a natural-language summary of those same
+>   time windows.
 >
 > All three should agree on *when* the anomalies happened. If the
 > agent starts naming specific VMs (e.g. *"vm-web-03 spiked to 98%
-> CPU"*), be suspicious: the tool's output doesn't contain any
-> `vm_id` column. Anything VM-specific was either invented by the
-> model or came from a different tool call.
+> CPU"*), be suspicious: the Test response in 4a has no `vm_id`
+> column. Anything VM-specific was either invented by the model or
+> came from a different tool call.
 >
 > Try a follow-up and feel the gap:
 >
@@ -375,11 +400,14 @@ Before clicking **Check**, confirm:
   ES|QL query), the index it reads from (`.ml-anomalies-*`), and
   that it's scoped to `job_id == "vm-capacity-planning"` and
   `result_type == "bucket"`.
-- I ran that ES|QL in **Discover > ES|QL mode** and the top
-  anomaly windows matched the red blocks in Anomaly Explorer.
-- I asked Kafeju the "when" anomaly question, confirmed the
-  right tool was called in the tool-call panel, and noticed the
-  tool cannot answer "which VM".
+- I ran the tool from the Agent Builder **Test** button and read
+  the `tabular_data` response columns (`anomaly_date`,
+  `severity_level`, `anomaly_score`, `event_count`, `bucket_span`),
+  and those rows matched the red blocks in Anomaly Explorer.
+- I asked Kafeju a generic anomaly question, confirmed
+  `kafeju.detect_resource_anomalies` was picked automatically in
+  the tool-call panel, and noticed the tool cannot answer
+  "which VM".
 - For Prompts A and B in Step 5, I inspected the tool-call panel
   and used the provided ES|QL to prove the answer was
   confabulated.
