@@ -145,26 +145,33 @@ With the data fresh in your mind, let's see the agent in action.
 
 1. Click the **AI Assistant** icon (sparkle ✨) in the top nav bar.
 2. In the agent selector dropdown, choose **Kafeju**.
-3. Ask each of these questions and watch the tool invocation pane:
+3. Ask each of these questions. Below each answer, expand the
+   **Reasoning** / tool-call panel and note **which `kafeju.*` tool
+   actually ran**:
 
 ```
 Which teams are wasting the most money on idle VMs?
 ```
 
-You should see Kafeju call a tool whose ID starts with `kafeju.`
-(for example `kafeju.analyze_vm_usage_patterns`). The answer should
-roughly agree with the team ranking you saw on the Drift dashboard.
+Kafeju should pick a tool that groups the data by team and surfaces
+drift / efficiency, typically **`kafeju.compare_team_request_vs_usage`**
+or **`kafeju.analyze_vm_usage_patterns`**. The exact choice can vary
+between runs — both are reasonable matches for this question, and
+both return team-level waste metrics that should roughly agree with
+the team ranking on the Drift dashboard.
 
 ```
 Detect any resource anomalies across our VMs.
 ```
 
-This invokes `kafeju.detect_resource_anomalies`, which reads the same
-ML predictions index you peeked at in Step 2.
+This should trigger **`kafeju.detect_resource_anomalies`**, which
+reads the ML predictions data you peeked at in Step 2. Confirm the
+tool ID in the reasoning panel.
 
 > **What to notice:** Every answer is grounded in a **tool call** that
 > runs real ES|QL against real data. The agent is only as smart as
-> the tools it has.
+> the tools it has — and which tool it picks is driven entirely by
+> the tool's **description**, which you'll inspect in Step 6.
 
 ---
 
