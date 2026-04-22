@@ -1,7 +1,7 @@
 ---
 slug: dissect-a-tool
-title: "Explore Data and Dissect a Tool"
-teaser: "Understand the data model and reverse-engineer an existing Agent Builder tool."
+title: "Explore ML Anomalies and Dissect a Tool"
+teaser: "See where Elastic's ML jobs run, what anomalies they found, then reverse-engineer the Agent Builder tool that turns those results into answers."
 type: challenge
 timelimit: 1500
 tabs:
@@ -15,188 +15,290 @@ tabs:
 notes:
   - type: text
     contents: |
-      # Dissect a Tool
+      # Explore ML Anomalies and Dissect a Tool
 
-      Every Agent Builder tool is just three things:
-      1. An **ID** — unique identifier
-      2. A **description** — tells the AI when to use it
-      3. An **ES|QL query** — the actual work it does
+      Before we touch Agent Builder, let's see what Elastic has *already*
+      figured out for us. Four Machine Learning anomaly-detection jobs
+      have been running against the GCP data. They scored every VM, every
+      team, every hour — without you writing a single query.
 
-      In this challenge you will explore the data, then reverse-engineer an
-      existing tool to understand exactly how it works.
+      In this challenge you will:
 
-      A warning up front: a confident-sounding answer from the agent is
-      **not** the same as a grounded one. Modern LLMs will happily
-      paraphrase whatever tool result is closest to the question — even
-      when the right tool doesn't exist. In Step 4 you'll learn to
-      *verify* every answer against the actual tool call and the raw
-      data.
+      1. Inspect those ML jobs in the Kibana UI.
+      2. Browse the anomalies they detected in **Anomaly Explorer**.
+      3. Open the Agent Builder tool that exposes those anomalies to
+         Kafeju, and understand its three parts — **ID**, **description**,
+         **ES|QL query** — all from the UI.
+      4. Run the same query yourself, ask Kafeju the matching question,
+         and confirm all three views tell the same story.
+      5. Finally, try a few questions the current toolbox *can't* answer
+         well and learn to spot the difference between a **grounded**
+         answer and a **confabulated** one.
+
+      Everything in this challenge is UI-first. The Terminal tab is
+      there only as an optional shortcut.
 ---
 
-# Challenge 2: Explore Data and Dissect a Tool
+# Challenge 2: Explore ML Anomalies and Dissect a Tool
 
-## Step 1: Explore the Data in Discover (10 min)
+Four ML anomaly-detection jobs have already been run on the GCP data.
+You will start by looking at those jobs and their results in the Kibana
+ML UI, then follow the same results all the way to a Kafeju answer.
 
-1. Open **Discover** (hamburger menu > Analytics > Discover)
-2. Select the **gcp-resource-executions-*** data view
-3. Set the time range to **Last 1 year**
-4. Expand a document and find these key fields:
+---
 
-| Field | What It Means |
+## Step 1: Meet the ML Jobs (UI, ~5 min)
+
+1. In Kibana, open the hamburger menu and navigate to **Analytics** >
+   **Machine Learning** > **Anomaly Detection** > **Jobs**.
+   (On some builds the entry point is **AI & ML** > **Machine Learning**
+   or **Management** > **Stack Management** > **Machine Learning**.)
+2. Confirm the time picker (top-right) is set to **Last 1 year**.
+3. You should see four jobs already created and run:
+
+| Job ID | What it detects | Partition / "over" field |
+|--------|----------------|--------------------------|
+| `resource-usage-anomalies` | Abnormally high CPU / memory usage | `metadata.team` |
+| `vm-capacity-planning` | Unusual CPU / memory vs peer VMs | `vm_info.vm_id` |
+| `team-cost-forecast` | Forecasts `cost_actual.total_cost_usd` | `metadata.team` |
+| `workload-growth-rate` | Mean cores used — growth trend | `metadata.team` |
+
+> **What you should see:** Each job has a green status, a job count of
+> records processed, and a small anomaly-score badge. The important
+> thing is the **partition / over field** column — it tells you *what
+> Elastic is comparing against what*. `vm-capacity-planning` compares
+> each VM to its peers; `resource-usage-anomalies` compares each team
+> against its own history.
+>
+> **Why it matters:** Elastic has already done the statistical
+> heavy-lifting. You don't need to invent an anomaly algorithm for
+> Kafeju — you just need a tool that reads the ML output.
+
+To make these ML results easy for tools (and ES|QL) to consume, they
+have been post-processed into two indices:
+
+- `ml-predictions-anomalies*` — one doc per anomaly record
+  (`record_score`, `severity`, `vm_id`, `team`, `actual`, `typical`…).
+- `ml-predictions-growth` — one doc per team
+  (`growth_rate_daily`, `predicted_days_to_90pct`…).
+
+You'll see those indices in action in the next steps.
+
+---
+
+## Step 2: Explore Detected Anomalies in the UI (~10 min)
+
+### 2a. Anomaly Explorer
+
+1. On the **Jobs** page, select `vm-capacity-planning` (and
+   optionally `resource-usage-anomalies`), then click
+   **View results** > **Anomaly Explorer**.
+2. Make sure the time range is still **Last 1 year**.
+3. Scan the **Overall** swim lane at the top. Red blocks are
+   high-severity anomalies; orange are warnings.
+4. Scroll down to **Top influencers** — note which `vm_info.vm_id`
+   and `metadata.team` values keep showing up.
+5. In the **Anomalies** table at the bottom, click the expand arrow on
+   one of the top rows. Look at:
+   - `actual` — what the VM's CPU/memory actually was in that bucket.
+   - `typical` — what the model expected, based on peer VMs and
+     history.
+   - `record_score` — severity (0–100).
+
+> **What you should see:** One or two VMs/teams dominating the
+> anomalies, with `actual` values far above `typical` (e.g. 95% CPU
+> when the model expected ~15%). A `record_score` above 75 is
+> "critical"; 50–75 is "major"; 25–50 is "minor".
+>
+> **Why it matters:** This is the ground truth. Any question a user
+> asks Kafeju like *"which VMs are behaving weirdly?"* should come
+> back with roughly the same VMs you're looking at right now.
+
+### 2b. Same data, from Discover
+
+1. Open the hamburger menu > **Analytics** > **Discover**.
+2. Select the data view **`ml-predictions-anomalies-workshop`**.
+3. Expand one document and find these fields:
+
+| Field | What it means |
 |-------|--------------|
-| `drift_metrics.combined_drift_score` | % of resources allocated but unused |
-| `resource_usage.cpu.avg_percent` | Actual average CPU utilization |
-| `resource_usage.cpu.p95_percent` | 95th percentile CPU (peak baseline) |
-| `metadata.team` | Team responsible for this VM |
-| `cost_actual.total_cost_usd` | Cost of this execution run |
-| `vm_info.vm_type_actual` | Machine type (e.g. n2-standard-16) |
+| `record_score` | Anomaly severity (0–100), same as Anomaly Explorer |
+| `severity` | Text bucket — `critical` / `major` / `minor` |
+| `vm_id`, `vm_type`, `team` | Which VM / team produced the anomaly |
+| `actual` vs `typical` | Observed value vs ML-expected value |
+| `function_description` | Which detector fired (e.g. `high mean`) |
 
-**Question:** If `combined_drift_score` is 70, what does that mean in
-practical terms?
+> **What you should see:** The same VMs that were red in Anomaly
+> Explorer appear here as top-scoring documents. Exploring in Discover
+> is uglier than the ML UI, but — critically — it can be expressed as
+> an ES|QL query. That's what makes it usable by an Agent Builder
+> tool.
 
-## Step 2: Dissect a Tool via the API (10 min)
+---
 
-Open the **Terminal** tab and fetch all tools:
+## Step 3: Dissect the ML Tool in the Agent Builder UI (~5 min)
 
-```bash
-curl -s -u elastic:workshopAdmin1! \
-  http://localhost:5601/api/agent_builder/tools \
-  -H "kbn-xsrf: true" | python3 -c "
-import json, sys
-tools = json.load(sys.stdin)
-for t in tools:
-    if t.get('id') == 'kafeju.analyze_vm_usage_patterns':
-        print('=== TOOL ANATOMY ===')
-        print(f\"ID:          {t['id']}\")
-        print(f\"Description: {t['description'][:100]}...\")
-        print(f\"Query:\")
-        print(t['configuration']['query'])
-"
+Now let's see how Kafeju consumes those predictions.
+
+1. Hamburger menu > **Agent Builder**. (Depending on the build it may
+   sit under **Management** > **Agent Builder**.)
+2. Click the **Tools** tab.
+3. In the filter box, type `detect_resource_anomalies` and open the
+   tool **`kafeju.detect_resource_anomalies`**.
+4. In the detail view, identify the three parts every Agent Builder
+   tool has:
+   - **ID** — `kafeju.detect_resource_anomalies`. This is how the
+     agent calls it.
+   - **Description** — the text that starts with *"Identifies VMs
+     with unusual resource usage patterns from ML anomaly
+     predictions…"*. This is **routing logic**: the AI reads it to
+     decide whether this tool is the right one for the user's
+     question.
+   - **Configuration > ES|QL query** — a query against
+     `ml-predictions-anomalies*` that filters `record_score > 25`,
+     sorts by score, and keeps the fields you just saw in Discover.
+
+> **What you should see:** The query reads from the **same index**
+> you browsed in Step 2b, and returns the **same fields** you saw on
+> an anomaly document. Nothing magical — it's plain ES|QL.
+>
+> **Why it matters:** An Agent Builder tool is *just* ID +
+> description + ES|QL. No model re-training, no streaming, no custom
+> code. That's the entire surface area you'll use for the rest of
+> the workshop.
+
+While you're in the Tools tab, also spot **`kafeju.predict_resize_needs`**
+— it follows the same pattern, but reads from `ml-predictions-growth`
+(the `workload-growth-rate` job's output). Two tools, same recipe.
+
+> **Optional (Terminal):** If you prefer CLI, the same information
+> is available at `GET /api/agent_builder/tools` — but the UI is the
+> source of truth for this workshop.
+
+---
+
+## Step 4: Run the Query Yourself and Ask Kafeju (~5 min)
+
+Time to connect the ML UI, the ES|QL tool, and the agent.
+
+1. **Copy** the ES|QL query from the tool detail pane in Step 3.
+2. Open **Discover** and switch to **ES|QL mode** (the toggle at the
+   top of Discover).
+3. **Paste and run** the query. You should get a table of the
+   highest-scoring anomalies.
+4. Now click the **AI Assistant** icon (✨) and switch to the
+   **Kafeju** agent.
+5. Ask:
+
+> **"Which VMs have the most unusual resource usage right now? Show
+> me the top anomalies."**
+
+6. When Kafeju answers, expand the **tool-call / reasoning panel**
+   under the answer and confirm that `kafeju.detect_resource_anomalies`
+   was the tool that ran.
+
+> **What you should see:** Three views of the same ML result:
+> - **Anomaly Explorer** (Step 2a) — human-friendly swim lanes.
+> - **Discover > ES|QL** (Step 4) — structured rows, same top VMs.
+> - **Kafeju** — a natural-language summary that names the *same*
+>   VMs and teams.
+>
+> All three should agree. If the agent's narrative names a VM that
+> isn't in your ES|QL result, the tool or the agent is lying. That's
+> the next step.
+
+---
+
+## Step 5: Spot the Gaps — Don't Trust, Verify (~10 min)
+
+Modern LLMs rarely say *"I can't answer that."* They pick the
+closest-looking tool, run it, and re-narrate the result as if it
+answered your actual question. Here you'll practise telling a
+**grounded** answer from a **confabulated** one.
+
+For each prompt below, in the Kafeju chat:
+
+1. Ask the prompt.
+2. Open the **tool-call / reasoning panel**: which `kafeju.*` tool
+   (if any) was called?
+3. In **Agent Builder > Tools** (or from Step 3), re-read that
+   tool's **description** and **ES|QL query**. Does the query
+   actually compute what the user asked for?
+4. Cross-check with the small ES|QL snippet provided, in
+   **Discover > ES|QL mode**.
+
+### Prompt A — regional pricing (gap)
+
+> **"Compare the hourly price of `n2-standard-8` across at least
+> three GCP regions and rank them from cheapest to most expensive."**
+
+Kafeju will likely give a confident answer like *"us-central1 is
+cheapest"*. Verify:
+
+```esql
+FROM gcp-pricing-catalog
+| WHERE machine_type == "n2-standard-8"
+| STATS n = COUNT(*) BY region
 ```
 
-Study the output:
-- The **ID** identifies the tool uniquely
-- The **description** tells the AI *when* to use it (routing logic)
-- The **ES|QL query** is what actually runs against Elasticsearch
+> **What you should see:** Only **one** region (`us-central1`)
+> exists in the catalog. The agent *invented* a multi-region
+> comparison — the data can't support one. Confabulated.
 
-## Step 3: Run the Query Yourself
-
-Copy the ES|QL query from Step 2 and paste it into **Discover > ES|QL
-mode** (toggle at the top of Discover). Run it.
-
-You should see a table of VMs grouped by team and machine type, with
-drift scores and CPU/memory usage. This is the raw data the agent sees.
-
-Now go to the **AI Assistant** > **Kafeju** and ask:
-
-> **"Show me VM usage patterns and where drift is highest."**
-
-Compare the raw query results with the agent's narrative answer. The
-tool provides data; the AI provides interpretation.
-
-## Step 4: Spot the Gaps — Don't Trust, Verify
-
-A modern LLM will **almost never say "I can't answer that."** It will
-pick the closest-looking tool, run it, and re-narrate the result as if
-it were the answer you asked for. Your job in this step is to tell
-the difference between a **grounded** answer and a **confabulated**
-one.
-
-For each prompt below:
-
-1. Ask it in the Kafeju agent.
-2. In the chat, open the **tool-call / reasoning panel** (usually
-   "Completed reasoning" or a tool-invocation dropdown under the
-   answer). Note:
-   - *Which* `kafeju.*` tool was actually called?
-   - Was **any** tool called, or did the model answer from thin air?
-3. Pull up that tool in the **Agent Builder** UI (or the curl output
-   from Step 2) and read its **description** and **ES|QL query**.
-   Ask yourself: *does this query actually compute what the user asked
-   for?*
-4. Cross-check with the one-liner ES|QL suggested below in **Discover
-   > ES|QL mode**.
-
-### Prompt A — baseline (grounded)
-
-> **"Show me VM usage patterns and where drift is highest."**
-
-- **Expected tool:** `kafeju.analyze_vm_usage_patterns`.
-- **Verify in Discover:**
-  ```esql
-  FROM gcp-resource-executions-*
-  | STATS avg_drift = AVG(drift_metrics.combined_drift_score) BY metadata.team
-  | SORT avg_drift DESC
-  ```
-- **You should see:** the same team ranking the agent narrates. ✅
-  Grounded.
-
-### Prompt B — regional pricing (gap)
-
-> **"Compare the hourly price of `n2-standard-8` across at least three
-> GCP regions and rank them from cheapest to most expensive."**
-
-The agent will almost certainly give you a confident answer like
-*"us-central1 is the cheapest."* Don't trust it — verify:
-
-- **Check the tool-call panel:** did any tool filter on `region`? (No
-  existing `kafeju.*` tool does.)
-- **Verify in Discover:**
-  ```esql
-  FROM gcp-pricing-catalog
-  | WHERE machine_type == "n2-standard-8"
-  | STATS n = COUNT(*) BY region
-  ```
-- **You should see:** only **one** region (`us-central1`) in the
-  catalog. The agent *invented* a multi-region comparison — the
-  dataset can't support one. ❌ Confabulated.
-
-### Prompt C — zombie VMs (gap)
+### Prompt B — zombie VMs (gap)
 
 > **"List zombie VMs: instances where P95 CPU < 10%, monthly cost >
 > $200, and the execution has been running for more than 168 hours.
 > Return the top 10 by cost."**
 
-The agent may respond with a nicely formatted list of high-drift VMs.
-Read carefully — those filters were probably never applied.
+The agent will probably answer with a list of high-drift VMs. Check
+the tool-call panel: likely `kafeju.analyze_vm_usage_patterns` or
+`kafeju.detect_resource_anomalies` — **neither** filters on P95
+CPU, monthly cost, **and** duration together. Verify:
 
-- **Check the tool-call panel:** which tool was called? Likely
-  `analyze_vm_usage_patterns` or `detect_resource_anomalies`.
-- **Read its ES|QL (from Step 2):** it does **not** filter by
-  `resource_usage.cpu.p95_percent < 10`, it does **not** threshold on
-  `cost_actual.total_cost_usd > 200`, and it does **not** check
-  `execution_time.duration_hours > 168`. It just returns the same
-  high-drift VMs it always does, re-labeled.
-- **Verify in Discover:**
-  ```esql
-  FROM gcp-resource-executions-*
-  | WHERE resource_usage.cpu.p95_percent < 10
-    AND cost_actual.total_cost_usd > 200
-    AND execution_time.duration_hours > 168
-  | STATS cost = SUM(cost_actual.total_cost_usd) BY metadata.workload_name, vm_info.vm_type_actual
-  | SORT cost DESC
-  | LIMIT 10
-  ```
-- **Compare the two lists.** If the agent's list doesn't match this
-  query's output, the agent confabulated. ❌
+```esql
+FROM gcp-resource-executions-*
+| WHERE resource_usage.cpu.p95_percent < 10
+  AND cost_actual.total_cost_usd > 200
+  AND execution_time.duration_hours > 168
+| STATS cost = SUM(cost_actual.total_cost_usd)
+    BY metadata.workload_name, vm_info.vm_type_actual
+| SORT cost DESC
+| LIMIT 10
+```
+
+> **What you should see:** The real zombie list is likely very
+> different from what Kafeju narrated. Confabulated — no tool
+> computes this.
 
 ### Takeaway
 
-For Prompts B and C the gap isn't that the agent errored out — it's
-that **no tool in the toolbox actually computes what was asked**, so
-the agent improvised. In the next challenges you will build the
-missing tools so these questions can be answered *from real data*,
-not from the model's imagination.
+In both prompts the agent didn't error — it just *improvised*
+because no tool in the toolbox answers the question. In Challenges 3
+and 4 you will build the missing tools so these questions become
+grounded.
+
+---
 
 ## Check Your Work
 
 Before clicking **Check**, confirm:
-- You ran the `analyze_vm_usage_patterns` ES|QL query in Discover.
-- You can name the 3 components of every tool (ID, description, query).
-- For each of the three prompts in Step 4 you inspected the
-  **tool-call panel** and can say which `kafeju.*` tool (if any) was
-  invoked.
-- You confirmed the regional-pricing gap with `STATS BY region` on
-  `gcp-pricing-catalog` (only one region exists).
-- You confirmed the zombie-VM gap by comparing the agent's answer to
-  the P95/cost/duration ES|QL query.
+
+- I opened the **Anomaly Detection Jobs** page and can name at
+  least 2 of the 4 ML jobs and what each one scores.
+- I used **Anomaly Explorer** to inspect at least one
+  high-severity anomaly (`record_score` > 75) and noted the
+  `actual` vs `typical` values.
+- I opened **`kafeju.detect_resource_anomalies`** in the Agent
+  Builder UI and can state its 3 components (ID, description,
+  ES|QL query) plus the index it reads from.
+- I ran that ES|QL in **Discover > ES|QL mode** and the top VMs
+  matched the ones I saw in Anomaly Explorer.
+- I asked Kafeju the anomaly question, confirmed the right tool
+  was called in the tool-call panel, and saw the same VMs in the
+  narrative.
+- For Prompts A and B in Step 5, I inspected the tool-call panel
+  and used the provided ES|QL to prove the answer was
+  confabulated.
+
+When you're ready, click **Check**.
