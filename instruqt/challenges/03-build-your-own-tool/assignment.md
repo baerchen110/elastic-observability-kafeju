@@ -75,10 +75,10 @@ Keep this query handy — you'll paste it into the tool in the next step.
   | Field           | Value                                                                                                                                                                                                                            |
   | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
   | **Tool ID**     | `participant.find_zombie_vms`                                                                                                                                                                                                    |
-  | **Type**        | `ES|QL`                                                                                                                                                                                                                          |
+  | **Type**        | `ESQL`                                                                                                                                                                                                                           |
   | **Description** | *Finds zombie VMs: machines with very low CPU usage (under 15%) that are wasting money. Shows which teams have idle resources ranked by total cost waste. Use when asked about zombie VMs, idle instances, or wasted resources.* |
   | **Labels**      | `participant`, `infrastructure`, `cost`                                                                                                                                                                                          |
-  | **ES|QL Query** | Paste the exact query from Step 2                                                                                                                                                                                                |
+  | "ES|QL"         | Paste the exact query from Step 2                                                                                                                                                                                                |
 
   > **Why the description matters:** When Kafeju receives a question,
   > it scans every tool's description to decide which one to call.
@@ -86,8 +86,8 @@ Keep this query handy — you'll paste it into the tool in the next step.
   > wasted resources"* is routing signal — make it explicit.
 5. Click **Save** & **Test** to sanity-check the tool:
   - This tool takes no inputs, so just click **Sumbit**.
-  - In the **Response** panel, expand the `tabular_data` entry and
-  confirm you see rows with columns `avg_cpu`, `avg_drift`,
+  - In the **Response** panel, expand the  entry and
+  confirm you see document with fields `avg_cpu`, `avg_drift`,
   `total_cost`, `occurrences`, `metadata.team`,
   `vm_info.vm_type_actual`, `resource_name`.
   - The rows should match what you saw in Discover in Step 2.
@@ -114,7 +114,7 @@ Agent Builder you attach tools to agents explicitly.
   list) and search for `participant`.
 5. Select `**participant.find_zombie_vms`** to attach it.
 6. Confirm it now appears in the Kafeju tools list alongside the
-  existing `kafeju.*` tools.
+  existing `kafeju.`* tools.
 7. Click **Save** (or **Update agent**).
 
 > **What you should see:** The Kafeju agent's tool list now includes
