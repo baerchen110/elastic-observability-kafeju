@@ -261,18 +261,10 @@ Builder can execute it directly.
 1. On the `kafeju.detect_resource_anomalies` detail page, click the
    **Test** button (top-right).
 2. This tool has no inputs, so just click **Submit**.
-3. Expand the **Response** panel. You'll see two entries:
-   - `type: "query"` — the exact ES|QL that ran.
-   - `type: "tabular_data"` — the result rows. Inspect the
-     `columns` array and confirm they're exactly what the `KEEP`
-     clause declared: `anomaly_date` (keyword), `severity_level`
-     (keyword), `anomaly_score` (double), `event_count` (long),
-     `bucket_span`.
+3. Expand the **Response** panel. You'll see three entries.
 
 > **Why it matters:** The Test button is the fastest way to
-> sanity-check a tool while you build it. The rows here should
-> line up with the red blocks you saw in Anomaly Explorer in Step
-> 2a — same ML job, same buckets, just a different UI.
+> sanity-check a tool while you build it. 
 
 ### 4b. Ask Kafeju a natural question
 
