@@ -31,9 +31,9 @@ notes:
 
 Open the **AI Assistant** > **Kafeju** and ask:
 
-> **"I just found zombie VMs in my infrastructure. Can you tell me which
-> region would be cheapest to move the surviving workloads to, and
-> estimate my monthly savings if I rightsize and relocate?"**
+```
+I just found zombie VMs in my infrastructure. Can you tell me which region would be cheapest to move the surviving workloads to, and estimate my monthly savings if I rightsize and relocate?
+```
 
 ### Watch the agent chain tools
 
@@ -83,14 +83,17 @@ take a human analyst hours to research manually.
 
 Try these compound questions that exercise multiple tools:
 
-> **"Show me the top 3 most wasteful teams, their zombie VMs, and
-> what instances they should switch to."**
+```
+Show me the top 3 most wasteful teams, their zombie VMs, and what instances they should switch to.
+```
 
-> **"Which team will hit capacity limits first, and is there a
-> cheaper region they could expand into?"**
+```
+Which team will hit capacity limits first, and is there a cheaper region they could expand into?
+```
 
-> **"Calculate the total monthly savings if we eliminate all zombie
-> VMs and move the remaining workloads to the cheapest region."**
+```
+Calculate the total monthly savings if we eliminate all zombie VMs and move the remaining workloads to the cheapest region.
+```
 
 Notice how the agent weaves together data from different tools to
 build a narrative answer. Each tool returns a data table; the AI
@@ -127,7 +130,9 @@ tools by matching the user's intent against each tool's description.
    wording.** For example, instead of saying "find zombie VMs",
    try:
 
-   > **"Which of our machines are basically doing nothing right now?"**
+   ```
+   Which of our machines are basically doing nothing right now?
+   ```
 
 2. Expand the **tool-call / reasoning panel** under Kafeju's answer.
    Did `participant.find_zombie_vms` get invoked, or did the agent

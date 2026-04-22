@@ -277,7 +277,9 @@ want to know if anything weird is going on.
    **Kafeju** agent.
 2. Ask a plain, everyday question:
 
-> **"Is anything unusual happening on our VMs lately?"**
+```
+Is anything unusual happening on our VMs lately?
+```
 
 3. When Kafeju answers, expand the **tool-call / reasoning panel**
    under the answer. You should see `kafeju.detect_resource_anomalies`
@@ -328,8 +330,9 @@ For each prompt below, in the Kafeju chat:
 
 ### Prompt A — regional pricing (gap)
 
-> **"Compare the hourly price of `n2-standard-8` across at least
-> three GCP regions and rank them from cheapest to most expensive."**
+```
+Compare the hourly price of n2-standard-8 across at least three GCP regions and rank them from cheapest to most expensive.
+```
 
 Kafeju will likely give a confident answer like *"us-central1 is
 cheapest"*. Verify:
@@ -346,9 +349,9 @@ FROM gcp-pricing-catalog
 
 ### Prompt B — zombie VMs (gap)
 
-> **"List zombie VMs: instances where P95 CPU < 10%, monthly cost >
-> $200, and the execution has been running for more than 168 hours.
-> Return the top 10 by cost."**
+```
+List zombie VMs: instances where P95 CPU < 10%, monthly cost > $200, and the execution has been running for more than 168 hours. Return the top 10 by cost.
+```
 
 The agent will probably answer with a list of high-drift VMs. Check
 the tool-call panel: likely `kafeju.analyze_vm_usage_patterns` or

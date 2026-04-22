@@ -131,8 +131,9 @@ Agent Builder you attach tools to agents explicitly.
 Go to **Kibana > AI Agent**, switch to the **Kafeju** agent, and
 ask:
 
-> **"Find zombie VMs — which expensive instances are sitting idle and
-> wasting money?"**
+```
+Find zombie VMs — which expensive instances are sitting idle and wasting money?
+```
 
 Expand the **tool-call / reasoning panel** under the answer and
 confirm that `participant.find_zombie_vms` was the tool that ran.

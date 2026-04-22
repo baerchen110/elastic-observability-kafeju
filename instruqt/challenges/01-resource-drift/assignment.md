@@ -148,13 +148,17 @@ With the data fresh in your mind, let's see the agent in action.
 2. In the agent selector dropdown, choose **Kafeju**.
 3. Ask each of these questions and watch the tool invocation pane:
 
-> **"Which teams are wasting the most money on idle VMs?"**
+```
+Which teams are wasting the most money on idle VMs?
+```
 
 You should see Kafeju call a tool whose ID starts with `kafeju.`
 (for example `kafeju.analyze_vm_usage_patterns`). The answer should
 roughly agree with the team ranking you saw on the Drift dashboard.
 
-> **"Detect any resource anomalies across our VMs."**
+```
+Detect any resource anomalies across our VMs.
+```
 
 This invokes `kafeju.detect_resource_anomalies`, which reads the same
 ML predictions index you peeked at in Step 2.
@@ -170,10 +174,13 @@ ML predictions index you peeked at in Step 2.
 Now ask two questions that *sound* reasonable but that Kafeju's current
 toolbox can't properly answer:
 
-> **"Which GCP region is cheapest for n2-standard-8 instances?"**
+```
+Which GCP region is cheapest for n2-standard-8 instances?
+```
 
-> **"Find zombie VMs — which expensive instances are sitting idle for
-> weeks?"**
+```
+Find zombie VMs — which expensive instances are sitting idle for weeks?
+```
 
 Kafeju will either:
 - hallucinate a plausible-sounding answer,
