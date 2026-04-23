@@ -15,20 +15,23 @@ tabs:
 notes:
   - type: text
     contents: |
-      # Dissect a Tool
+      # Explore Data and Dissect a Tool
 
-      Every Agent Builder tool is just three things:
-      1. An **ID** — unique identifier
-      2. A **description** — tells the AI when to use it
-      3. An **ES|QL query** — the actual work it does
+      In Challenge 1, you explored **Kafeju** and saw that its answers depend
+      on its tools — and where those tools end, the agent struggles.
 
-      In this challenge you will explore the data, then reverse-engineer an
-      existing tool to understand exactly how it works.
+      Now you go under the hood. Every Agent Builder tool is three things:
+      1. An **ID** — a unique identifier
+      2. A **description** — tells the model when to use the tool
+      3. An **ES|QL query** — the work that runs against Elasticsearch
+
+      In this challenge, you explore the data in Discover, then
+      reverse-engineer an existing tool so you know exactly how it works.
 ---
 
 # Challenge 2: Explore Data and Dissect a Tool
 
-## Step 1: Explore the Data in Discover (10 min)
+## Step 1: Explore the Data in Discover
 
 1. Open **Discover** (hamburger menu > Analytics > Discover)
 2. Select the **gcp-resource-executions-*** data view
@@ -47,7 +50,7 @@ notes:
 **Question:** If `combined_drift_score` is 70, what does that mean in
 practical terms?
 
-## Step 2: Dissect a Tool via the API (10 min)
+## Step 2: Dissect a Tool via the API
 
 Open the **Terminal** tab and fetch all tools:
 
@@ -69,18 +72,18 @@ for t in tools:
 
 Study the output:
 - The **ID** identifies the tool uniquely
-- The **description** tells the AI *when* to use it (routing logic)
+- The **description** tells the model *when* to use it (routing logic)
 - The **ES|QL query** is what actually runs against Elasticsearch
 
 ## Step 3: Run the Query Yourself
 
-Copy the ES|QL query from Step 2 and paste it into **Discover > ES|QL
-mode** (toggle at the top of Discover). Run it.
+Copy the ES|QL query from Step 2 and paste it into **Discover** > **ES|QL**
+(toggle at the top of Discover). Run it.
 
 You should see a table of VMs grouped by team and machine type, with
 drift scores and CPU/memory usage. This is the raw data the agent sees.
 
-Now go to the **AI Assistant** > **Kafeju** and ask:
+Now open the **AI Assistant**, choose **Kafeju**, and ask:
 
 > **"Show me VM usage patterns and where drift is highest."**
 
@@ -89,24 +92,24 @@ tool provides data; the AI provides interpretation.
 
 ## Step 4: Spot the Gaps
 
-Test these three questions in the Kafeju agent. For each, note whether
-it gives a structured data answer or a vague/generic response:
+In the Kafeju agent, try these three questions. For each one, note whether
+you get a structured, data-backed answer or something vague or generic:
 
-1. **"Show me VM usage patterns"**
-   - Expected: Works (uses `analyze_vm_usage_patterns`)
+1. **"Show me VM usage patterns"**  
+   Expected: Works — uses `analyze_vm_usage_patterns`.
 
-2. **"What's the cheapest region for my workload?"**
-   - Expected: Fails — no tool covers regional pricing comparison
+2. **"What's the cheapest region for my workload?"**  
+   Expected: Fails — no tool covers regional pricing comparison.
 
-3. **"Find zombie VMs wasting money"**
-   - Expected: Fails — no tool specifically targets low-CPU expensive VMs
+3. **"Find zombie VMs wasting money"**  
+   Expected: Fails — no tool specifically targets low-CPU, expensive VMs.
 
-Write down which questions fail. You will build the tools to fill these
-gaps in the next challenges.
+Write down which questions fail. In later challenges, you will build tools
+to fill these gaps.
 
 ## Check Your Work
 
-Before clicking **Check**, confirm:
-- You ran the `analyze_vm_usage_patterns` ES|QL query in Discover
-- You can name the 3 components of every tool (ID, description, query)
-- You identified at least 1 question the agent cannot answer
+Before clicking **Check**, confirm you:
+- Ran the `analyze_vm_usage_patterns` ES|QL query in Discover
+- Can name the three parts of every tool (ID, description, ES|QL query)
+- Identified at least one question the agent cannot answer well

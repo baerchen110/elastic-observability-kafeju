@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"path": "../.."
+		},
+		{
+			"path": "../../../../elastic/o11y-ai-agent-instruqt"
+		}
+	],
+	"settings": {}
+}
