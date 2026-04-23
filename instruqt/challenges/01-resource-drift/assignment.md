@@ -47,12 +47,14 @@ Before asking an AI anything, *you* should know what data exists.
 | `drift_metrics.combined_drift_score` | % of allocated resources that are *not* being used |
 | `cost_actual.total_cost_usd` | Cost of that execution |
 
+![Screenshot 2026-04-23 at 10.34.53.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/1511c65789408ef0e013c304727b91e0/assets/Screenshot%202026-04-23%20at%2010.34.53.png)
+
 4. Now switch the data view to **GCP Pricing Catalog** and expand
    a document. Note how each machine type has an hourly price per
    region.
 5. Switch once more to **ML Anomalies**. Each record has a
    `record_score` (how anomalous) and the VM / team it belongs to.
-
+![Screenshot 2026-04-23 at 10.35.26.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/3b8aacbb6f20305718970fea5b5cf70f/assets/Screenshot%202026-04-23%20at%2010.35.26.png)
 > **What to notice:** Three *independent* data views tell you the
 > story — actual usage (**GCP Resource Executions**), pricing
 > (**GCP Pricing Catalog**), and ML anomaly scores (**ML
@@ -73,6 +75,7 @@ sure the time picker is still on **Last 1 year**.)
 Panels show:
 - Average drift % across the fleet
 - Drift broken down by **team**, **machine type**, and **zone**
+![Screenshot 2026-04-23 at 10.36.01.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/728ab96446f8d0a39ddbcb06bce65114/assets/Screenshot%202026-04-23%20at%2010.36.01.png)
 
 > **What to notice:** Drift is *not* evenly distributed. A few teams
 > and a few machine types dominate the waste. These are the exact VMs
@@ -84,17 +87,18 @@ Panels show:
 - Total compute cost and cost by team
 - Billing trend over time
 - Estimated savings from rightsizing over-provisioned VMs
-
+![Screenshot 2026-04-23 at 10.36.15.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/9dfcaa7377db8584ff73253b62c0f08d/assets/Screenshot%202026-04-23%20at%2010.36.15.png)
 > **What to notice:** The gap between *current spend* and *rightsized
 > spend* is the prize money. Later in the workshop you will build a
 > tool that surfaces that number on demand.
 
-### 3c. Anomaly Detection & Capacity Planning
+### 2c. Anomaly Detection & Capacity Planning
 
 Panels show:
 - ML anomaly score timeline, by team
 - Growth/capacity forecasts
 
+![Screenshot 2026-04-23 at 10.36.32.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/69757658cacdc43bee6f46a5c06f8073/assets/Screenshot%202026-04-23%20at%2010.36.32.png)
 > **What to notice:** The ML jobs have already scored every VM. The
 > agent doesn't need to run ML — it just needs a **tool** to query
 > these predictions. That's what you will build in Challenge 2 and 3.
@@ -105,15 +109,20 @@ Panels show:
 
 With the data fresh in your mind, let's see the agent in action.
 
-1. Click the **AI Assistant** icon (sparkle ✨) in the top nav bar.
-2. In the agent selector dropdown, choose **Kafeju**.
-3. Ask each of these questions. Below each answer, expand the
+1. Click the **AI Assistant** icon  in the top nav bar.
+2. Select **Try the new AI Agent** and confirm
+![Screenshot 2026-04-23 at 10.40.33.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/ac883f019a0fd9964df79ebb8d650cd6/assets/Screenshot%202026-04-23%20at%2010.40.33.png)
+
+3. In the agent selector dropdown, choose **Kafeju**.
+![Screenshot 2026-04-23 at 10.40.44.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/425140636000a3b545120ad0c8bda57e/assets/Screenshot%202026-04-23%20at%2010.40.44.png)
+4. Ask each of these questions. Below each answer, expand the
    **Reasoning** / tool-call panel and note **which `kafeju.*` tool
    actually ran**:
 
 ```
 Which teams are wasting the most money on idle VMs?
 ```
+![Screenshot 2026-04-23 at 10.41.26.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/91977b41b82ba4123ae2b17e8c776960/assets/Screenshot%202026-04-23%20at%2010.41.26.png)
 
 Kafeju should pick a tool that groups the data by team and surfaces
 drift / efficiency, typically **`kafeju.compare_team_request_vs_usage`**
@@ -121,6 +130,8 @@ or **`kafeju.analyze_vm_usage_patterns`**. The exact choice can vary
 between runs — both are reasonable matches for this question, and
 both return team-level waste metrics that should roughly agree with
 the team ranking on the Drift dashboard.
+
+![Screenshot 2026-04-23 at 10.41.36.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/d1874faa2055c3097d4397dc1b465ce2/assets/Screenshot%202026-04-23%20at%2010.41.36.png)
 
 ```
 Detect any resource anomalies across our VMs.
@@ -133,7 +144,7 @@ tool ID in the reasoning panel.
 > **What to notice:** Every answer is grounded in a **tool call** that
 > runs real ES|QL against real data. The agent is only as smart as
 > the tools it has — and which tool it picks is driven entirely by
-> the tool's **description**, which you'll inspect in Step 6.
+> the tool's **description**, which you'll inspect in Step 5.
 
 ---
 
@@ -155,14 +166,27 @@ Kafeju will likely answer with a specific region and price (e.g.
 *"us-central1, ~$283/month — the lowest price for this machine
 type"*). Expand the reasoning panel and look at the ES|QL:
 
-- The pricing catalog in this workshop only contains **one region**
-  (`us-central1`). The query isn't ranking regions against each
-  other — there's nothing to rank against. Kafeju re-narrates the
-  single row it got back as if it were the winner of a multi-region
-  comparison.
+- The tool it usually picks (`kafeju.get_instance_cost_and_specs`)
+  returns a **broad slice** of the catalog (many machine types,
+  sorted by hourly cost, capped at 30 rows). It does **not** run the
+  tight question you asked: *rank every region for `n2-standard-8`
+  only*. The LLM may still sound as if it compared **all** GCP
+  regions worldwide.
 
-You'll drill into this exact prompt again in Challenge 2 and see the
-one-line ES|QL that proves it.
+- In **Discover > ES|QL**, run the ground truth for *your* dataset
+  (however many regions exist in the workshop catalog):
+
+```esql
+FROM gcp-pricing-catalog
+| WHERE machine_type == "n2-standard-8"
+| KEEP region, cost_per_month_usd
+| SORT cost_per_month_usd ASC
+```
+
+  Compare row count and ordering to Kafeju's narrative.
+
+You'll drill into this exact prompt again in Challenge 2 with the
+same verification mindset.
 
 ### Prompt B — zombie VMs
 
@@ -202,37 +226,32 @@ check the tool's ES|QL against your actual intent.
 
 ---
 
-## Step 6: Inspect Kafeju's Tools in the Agent Builder UI
+## Step 5: Inspect Kafeju's Tools in the Agent Builder UI
 
 Let's look under the hood — entirely in the Kibana UI, no terminal
 needed.
 
-1. Open the hamburger menu and navigate to **Agent Builder**.
-   (Depending on the build, it may appear directly in the menu or
-   under **Management** > **Agent Builder**.)
-2. Click the **Agents** tab and open the **Kafeju** agent.
-3. Scroll to the **Tools** section. You should see a list of tool IDs
-   attached to this agent.
-4. Click on any tool to open its detail view. Notice the three parts:
-   - an **ID** (unique name),
-   - a **description** (how the agent decides when to use it),
-   - a **configuration** that contains an **ES|QL query** (the actual
-     work).
-5. Go back and open the **Tools** tab. Notice that **every tool
-   attached to Kafeju starts with `kafeju.`** — there are no
-   generic `platform.core.*` search / ES|QL tools in this agent.
-   This is deliberate: in Agent Builder you *can* hand an agent a
-   generic "search any index / run any ES|QL" escape hatch, but
-   Kafeju has been **scoped on purpose** to only the custom
-   workshop tools. That's what makes the gaps in Step 5 actually
-   show up — with an escape-hatch tool, the agent would silently
-   fall back to generic search and hide the gap.
+1. Open **Agent Builder** (often under the top-right **⋯** menu or
+   the main Kibana menu — exact placement depends on your Kibana
+   build).
+2. Open the **Agents** tab and select the **Kafeju** agent.
+3. Open the **Tools** tab. Use the search bar if needed so the list
+   shows only tools attached to Kafeju.
+
+![Screenshot 2026-04-23 at 10.49.29.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/7a940e8f57fe7fa787eacdf216b33dd5/assets/Screenshot%202026-04-23%20at%2010.49.29.png)
+
+4. Notice that **every tool attached to Kafeju starts with
+   `kafeju.`** — there are no generic `platform.core.*` search /
+   ES|QL tools in this agent. In Agent Builder you *can* give an agent
+   a generic "search any index / run any ES|QL" escape hatch, but
+   Kafeju has been **scoped on purpose** to only the custom workshop
+   tools.
 
 > **What to notice:**
 > - The list of `kafeju.*` tools *is* Kafeju's capability surface.
 >   If a question can't be answered with one of these tools, Kafeju
 >   can't answer it reliably — which is exactly what you just saw
->   in Step 5.
+>   in Step 4 (Find the Gap).
 > - Every `kafeju.*` tool is just an ES|QL query with a description.
 >   In the next challenges you will read one of these queries line by
 >   line, then write your own.
@@ -241,7 +260,7 @@ needed.
 
 ## Check Your Work
 
-Before clicking **Check**, confirm you can answer *yes* to each of
+Before clicking **Next**, confirm you can answer *yes* to each of
 these:
 
 - I asked Kafeju at least **one question it answered well** and
@@ -249,4 +268,4 @@ these:
 - I opened the **Agent Builder UI**, found the Kafeju agent, and can
   name at least one `kafeju.*` tool attached to it.
 
-When you're ready, click **Check**.
+When you're ready, click **Next**.

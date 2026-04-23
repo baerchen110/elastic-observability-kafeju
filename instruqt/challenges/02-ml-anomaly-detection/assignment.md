@@ -1,44 +1,3 @@
----
-slug: dissect-a-tool
-title: "Explore ML Anomalies and Dissect a Tool"
-teaser: "See where Elastic's ML jobs run, what anomalies they found, then reverse-engineer the Agent Builder tool that turns those results into answers."
-type: challenge
-timelimit: 1500
-tabs:
-  - title: Kibana
-    type: service
-    hostname: elastic-vm
-    port: 5601
-  - title: Terminal
-    type: terminal
-    hostname: elastic-vm
-notes:
-  - type: text
-    contents: |
-      # Explore ML Anomalies and Dissect a Tool
-
-      Before we touch Agent Builder, let's see what Elastic has *already*
-      figured out for us. Four Machine Learning anomaly-detection jobs
-      have been running against the GCP data. They scored every VM, every
-      team, every hour — without you writing a single query.
-
-      In this challenge you will:
-
-      1. Inspect those ML jobs in the Kibana UI.
-      2. Browse the anomalies they detected in **Anomaly Explorer**.
-      3. Open the Agent Builder tool that exposes those anomalies to
-         Kafeju, and understand its three parts — **ID**, **description**,
-         **ES|QL query** — all from the UI.
-      4. Run the same query yourself, ask Kafeju the matching question,
-         and confirm all three views tell the same story.
-      5. Finally, try a few questions the current toolbox *can't* answer
-         well and learn to spot the difference between a **grounded**
-         answer and a **confabulated** one.
-
-      Everything in this challenge is UI-first. The Terminal tab is
-      there only as an optional shortcut.
----
-
 # Challenge 2: Explore ML Anomalies and Dissect a Tool
 
 Four ML anomaly-detection jobs have already been run on the GCP data.
@@ -47,14 +6,13 @@ ML UI, then follow the same results all the way to a Kafeju answer.
 
 ---
 
-## Step 1: Meet the ML Jobs (UI, ~5 min)
+## Step 1: Meet the ML Jobs
 
-1. In Kibana, open the hamburger menu and navigate to **Analytics** >
-   **Machine Learning** > **Anomaly Detection** > **Jobs**.
-   (On some builds the entry point is **AI & ML** > **Machine Learning**
-   or **Management** > **Stack Management** > **Machine Learning**.)
-2. Confirm the time picker (top-right) is set to **Last 1 year**.
+1. In Kibana, confirm the time picker (top-right) is set to **Last 1 year**.
+2. In the app search bar, type **jobs** and select **Machine learning / Anomaly Detection jobs**
+![Screenshot 2026-04-23 at 15.06.16.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/cef1cb2590cd48f47bfe8b46152cd589/assets/Screenshot%202026-04-23%20at%2015.06.16.png)
 3. You should see four jobs already created and run:
+![Screenshot 2026-04-23 at 15.08.35.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/2b787325b212a5ba6c97c24d69321793/assets/Screenshot%202026-04-23%20at%2015.08.35.png)
 
 | Job ID | What it detects | Partition / "over" field |
 |--------|----------------|--------------------------|
@@ -96,11 +54,13 @@ You'll see `.ml-anomalies-*` in action in the next steps.
 
 1. On the **Jobs** page, select `vm-capacity-planning` (and
    optionally `resource-usage-anomalies`), then click
-   **View results** > **Anomaly Explorer**.
+   **Open 2 jobs in Anomaly Explorer**.
+![Screenshot 2026-04-23 at 15.08.46.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/8d8d6425e0953e2b29936ecde78cd360/assets/Screenshot%202026-04-23%20at%2015.08.46.png)
 2. Make sure the time range is still **Last 1 year**.
 3. Scan the **Overall** swim lane at the top. Red blocks are
    high-severity anomalies; orange are warnings.
-4. Scroll down to **Top influencers** — note which `vm_info.vm_id`
+![Screenshot 2026-04-23 at 15.10.38.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/1c55a3221fa4526e2519beae90e1d760/assets/Screenshot%202026-04-23%20at%2015.10.38.png)
+4. Check **Top influencers** — note which `vm_info.vm_id`
    and `metadata.team` values keep showing up.
 5. In the **Anomalies** table at the bottom, click the expand arrow on
    one of the top rows. Look at:
@@ -127,9 +87,9 @@ results live in the system index `.ml-anomalies-*`. Let's peek at
 one raw document.
 
 1. Open the hamburger menu > **Analytics** > **Discover**.
-2. Click the data-view selector (top-left) and switch to
-   **ES|QL mode** (the toggle at the top of Discover).
-3. Run this small query — it's a slimmed-down version of what the
+2. Click the **Try ES|QL** button at the top of Discover and switch to
+   **ES|QL mode**.
+3. Run this query — it's a slimmed-down version of what the
    Kafeju tool will run in Step 3:
 
    ```esql
@@ -143,7 +103,19 @@ one raw document.
    | LIMIT 20
    ```
 
-   Key fields:
+![Screenshot 2026-04-23 at 15.13.48.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/5cc0e9cf241b620179e34eef31454f97/assets/Screenshot%202026-04-23%20at%2015.13.48.png)
+
+> **Editor vs. execution:** `.ml-anomalies-*` is an Elasticsearch
+> **hidden system index** (ML internal results). Discover's ES|QL
+> editor may still show a **validation warning** on line 1 — for
+> example *"Unknown index `.ml-anomalies-*`"* or a red underline on
+> `FROM` — because the UI index picker does not always resolve dot
+> indices, even when your role is allowed to read them. **If rows
+> appear in the results grid, the query ran successfully**; treat
+> the warning as a common false positive when querying `.ml-*`
+> patterns from Discover.
+
+**Key fields:**
 
    | Field | What it means |
    |-------|--------------|
@@ -162,17 +134,16 @@ one raw document.
 
 ---
 
-## Step 3: Dissect the ML Tool in the Agent Builder UI (~5 min)
-
+## Step 3: Dissect the ML Tool in the Agent Builder UI
 
 Now let's see how Kafeju consumes those predictions.
 
-1. Hamburger menu > **Agent Builder**. (Depending on the build it may
-   sit under **Management** > **Agent Builder**.)
-2. Click the **Tools** tab.
-3. In the filter box, type `anomalies` and open the
+1. In the app search bar, type **Agent tools** and select **Agent / Tools**
+![Screenshot 2026-04-23 at 15.19.34.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/55f58451546db5499b9c307574cab2d3/assets/Screenshot%202026-04-23%20at%2015.19.34.png)
+2. In the filter box, type `anomalies` and open the
    tool **`kafeju.detect_resource_anomalies`**.
-4. In the detail view, identify the three parts every Agent Builder
+![Screenshot 2026-04-23 at 15.20.34.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/c220bd397290558de7d3cf1394de5b98/assets/Screenshot%202026-04-23%20at%2015.20.34.png)
+3. In the detail view, identify the three parts every Agent Builder
    tool has:
    - **ID** — `kafeju.detect_resource_anomalies`. This is how the
      agent calls it.
@@ -219,7 +190,7 @@ Read it line by line:
   the same thresholds you noted in Step 2a.
 - `KEEP` + `LIMIT 20` — return at most 20 rows, each one a
   time bucket with its severity.
-
+![Screenshot 2026-04-23 at 15.21.40.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/484175ffedbf7fe08955d5b84a5afb4c/assets/Screenshot%202026-04-23%20at%2015.21.40.png)
 > **What you should see:** The query reads from the **same index**
 > you browsed in Step 2b, and the `EVAL` turns the raw score into the
 > same `CRITICAL / HIGH / MEDIUM / LOW` ladder Anomaly Explorer hints
@@ -248,7 +219,7 @@ the `workload-growth-rate` job's output). Two tools, same recipe.
 
 ---
 
-## Step 4: Run the Tool Two Ways (~5 min)
+## Step 4: Run the Tool Two Ways
 
 You've already read the tool's ES|QL. Now run the tool and see what
 it actually returns — first on its own (via Agent Builder's Test
@@ -262,11 +233,12 @@ Builder can execute it directly.
 
 1. On the `kafeju.detect_resource_anomalies` detail page, click the
    **Test** button (top-right).
+![Screenshot 2026-04-23 at 15.22.14.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/ce9d162f22f8f88bdafc32808d1be958/assets/Screenshot%202026-04-23%20at%2015.22.14.png)
 2. This tool has no inputs, so just click **Submit**.
-3. Expand the **Response** panel. You'll see three entries.
-
+3. Expand the **Response** panel and scroll down. You'll see three entries.
+![Screenshot 2026-04-23 at 15.22.50.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/49ff509524fdb4bd13cd16f33dbfc40b/assets/Screenshot%202026-04-23%20at%2015.22.50.png)
 > **Why it matters:** The Test button is the fastest way to
-> sanity-check a tool while you build it. 
+> sanity-check a tool while you build it.
 
 ### 4b. Ask Kafeju a natural question
 
@@ -274,14 +246,14 @@ Now pretend you're a platform engineer who has never heard of
 `.ml-anomalies-*` or `kafeju.detect_resource_anomalies`. You just
 want to know if anything weird is going on.
 
-1. Click the **AI Assistant** icon (✨) and switch to the
+1. Click the **AI Assistant** icon and switch to the
    **Kafeju** agent.
 2. Ask a plain, everyday question:
 
 ```
 Is anything unusual happening on our VMs lately?
 ```
-
+![Screenshot 2026-04-23 at 15.24.33.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/95e4fe286aab74adcaaccaf50ef11523/assets/Screenshot%202026-04-23%20at%2015.24.33.png)
 3. When Kafeju answers, expand the **tool-call / reasoning panel**
    under the answer. You should see `kafeju.detect_resource_anomalies`
    chosen automatically — the agent picked it from the **tool
@@ -315,7 +287,7 @@ Is anything unusual happening on our VMs lately?
 
 Modern LLMs rarely say *"I can't answer that."* They pick the
 closest-looking tool, run it, and re-narrate the result as if it
-answered your actual question. Here you'll practise telling a
+answered your actual question. Here you'll practice telling a
 **grounded** answer from a **confabulated** one.
 
 For each prompt below, in the Kafeju chat:
@@ -323,7 +295,7 @@ For each prompt below, in the Kafeju chat:
 1. Ask the prompt.
 2. Open the **tool-call / reasoning panel**: which `kafeju.*` tool
    (if any) was called?
-3. In **Agent Builder > Tools** (or from Step 3), re-read that
+3. In **Agent Builder / Tools** (or from Step 3), re-read that
    tool's **description** and **ES|QL query**. Does the query
    actually compute what the user asked for?
 4. Cross-check with the small ES|QL snippet provided, in
@@ -343,10 +315,16 @@ FROM gcp-pricing-catalog
 | WHERE machine_type == "n2-standard-8"
 | STATS n = COUNT(*) BY region
 ```
+![Screenshot 2026-04-23 at 15.25.56.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/6aecccd1fb3f2125136da4f88401e39f/assets/Screenshot%202026-04-23%20at%2015.25.56.png)
 
-> **What you should see:** Only **one** region (`us-central1`)
-> exists in the catalog. The agent *invented* a multi-region
-> comparison — the data can't support one. Confabulated.
+> **What you should see:** The verification query tells you **how
+> many regions actually exist** in the workshop **GCP Pricing
+> Catalog** for `n2-standard-8`, and which is cheapest among *those*
+> rows. The seed data usually lists only a **small handful** of
+> regions — not a global GCP price matrix. If Kafeju sounded as if
+> it compared **at least three** regions (or the whole public cloud),
+> that narrative is **not supported** by the catalog alone —
+> confabulated.
 
 ### Prompt B — zombie VMs (gap by tool chaining)
 
@@ -411,8 +389,8 @@ The gap isn't *"the agent can't answer"* — the agent is very
 willing to answer. The gap is that **no single tool applies the
 user's filter**, so the agent chains several tools, fills the
 missing filter in prose, and even **violates its own stated
-criteria** when the data doesn't match (the P95-CPU-14%-still-a-
-zombie tell).
+criteria** when the data doesn't match (for example a VM with
+**P95 CPU above 10%** still described as a “zombie”).
 
 The only robust fix is a dedicated tool whose **ES|QL itself
 applies the filter** — which is exactly what you'll build in
@@ -422,7 +400,7 @@ Challenge 3 (a real zombie-VM tool) and design in Challenge 4.
 
 ## Check Your Work
 
-Before clicking **Check**, confirm:
+Before clicking **Next**, confirm:
 
 - I opened the **Anomaly Detection Jobs** page and can name at
   least 2 of the 4 ML jobs and what each one scores.
@@ -446,4 +424,4 @@ Before clicking **Check**, confirm:
   and used the provided ES|QL to prove the answer was
   confabulated.
 
-When you're ready, click **Check**.
+When you're ready, click **Next**.
