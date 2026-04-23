@@ -1,19 +1,24 @@
-# Challenge 1: Use the custom agent
+# Challenge 1: From Consumer to Creator
 
 ## About this challenge
 
 **Kafeju** echoes the Greek *καφετζού* (*kafetzoú*): the café figure who
-reads the cup to **tell fortunes**—to infer what is likely to happen next
-from what is left behind. In this workshop the metaphor is deliberate but
-**secular**: instead of mysticism, Kafeju uses **GCP execution metrics,
-pricing, billing, and ML** to make **evidence-backed predictions**—where
-drift will hurt the budget, which workloads look idle, what anomalies and
-growth models flag, and where rightsizing might pay off. It is the custom
-agent you will extend; it analyzes VM usage, detects **resource drift**
-(the gap between what a team *asked for* and what they *actually use*),
-and points toward rightsizing to cut cost.
+reads the cup to **tell fortunes** by inferring what comes next from what
+is left behind. In this workshop, that metaphor is deliberate but
+**secular**. Instead of mysticism, Kafeju uses **GCP execution metrics,
+pricing, billing, and ML** to make **evidence-backed predictions** about
+where drift will hurt the budget, which workloads look idle, what anomalies
+and growth models are signaling, and where rightsizing can pay off.
 
-The environment has already been pre-loaded for you with:
+Kafeju is the custom agent you will extend. It analyzes VM usage, detects
+**resource drift** (the gap between what a team *asked for* and what they
+*actually use*), and points toward rightsizing opportunities.
+
+The environment is pre-loaded with workshop sample data captured through
+Elastic Agent from real-world GCP telemetry (billing, VM usage, and costs).
+The diagram below shows the high-level data-collection architecture.
+
+![Screenshot 2026-04-23 at 20.46.36.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/db13147b2517b77ded9b571227083013/assets/Screenshot%202026-04-23%20at%2020.46.36.png)
 
 - **~12,000 GCP resource-execution records** — every VM run with
   allocated vs actual CPU/memory, cost, team, zone, and machine type.
@@ -24,8 +29,10 @@ The environment has already been pre-loaded for you with:
 - **GCP billing records** — daily cost roll-ups.
 - **Three pre-built dashboards** that visualize the above.
 
-In this challenge you will **explore that data first**, then meet the
-Kafeju agent and find where its current tools fall short.
+All data has been anonymized for this workshop.
+
+In this challenge, you will **explore the data first**, then meet the
+Kafeju agent and identify where its current tools fall short.
 
 ---
 

@@ -276,7 +276,9 @@ Is anything unusual happening on our VMs lately?
 >
 > Try a follow-up and feel the gap:
 >
-> > **"Which specific VM was responsible for those anomalies?"**
+```
+"Which specific VM was responsible for those anomalies?"
+```
 >
 > `kafeju.detect_resource_anomalies` cannot answer this from its
 > current ES|QL. The next step turns that pain into a lesson.
@@ -329,68 +331,64 @@ FROM gcp-pricing-catalog
 ### Prompt B — zombie VMs (gap by tool chaining)
 
 ```
-List zombie VMs: instances where P95 CPU < 10%, monthly cost > $200, and the execution has been running for more than 168 hours. Return the top 10 by cost.
+List likely zombie workloads by team and VM type: low average P95 CPU, meaningful cumulative runtime, and non-trivial cumulative cost. Return the top 10 by cost.
 ```
 
 This time Kafeju will probably **chain 3–5 `kafeju.*` tools** and
-hand you a very polished top-10 list where every VM is tagged
-*"P95 CPU < 10%"*, *"Monthly Cost > $200"*, and *"Execution
-Duration: >168 hours"*. It looks grounded. It isn't.
+hand you a polished top-10 list with confident zombie labels. It may
+look grounded, but you still need to verify whether any single tool
+actually applies the full filter logic.
 
 Open the **Reasoning** panel and answer these three questions for
 yourself:
 
-1. **Which tool filtered on `execution_time.duration_hours > 168`?**
-   Read the ES|QL of every tool that ran. None of the `kafeju.*`
-   tools in the default kit actually queries that field — the
-   *"Execution Duration: >168 hours"* line in the final answer is
-   LLM-side prose, not data.
+1. **Which tool computed and filtered `total_runtime_hours > 2`?**
+   The verification logic uses:
+   `ROUND(SUM(execution_time.duration_minutes) / 60, 1)` and then a
+   `WHERE total_runtime_hours > 2` filter. Check whether any invoked
+   tool actually does that full aggregation + filter.
 
-2. **Which tool filtered on `resource_usage.cpu.p95_percent < 10`?**
-   Tools like `kafeju.analyze_vm_usage_patterns` and
-   `kafeju.get_vm_sizing_analysis` **rank by `combined_drift`**
-   and return P95 CPU as a *column*, but they don't `WHERE`-filter
-   on it. The LLM keeps rows that "happen" to have P95 CPU < 10 and
-   quietly ignores rows that don't. Scroll the final answer — can
-   you spot a VM with **P95 CPU > 10%** still tagged as a zombie
-   with a hand-waved *"P1 / slightly above threshold"* note? That's
-   a direct criterion violation the agent smoothed over in prose.
+2. **Which tool filtered on `avg_p95_cpu < 30` after aggregation?**
+   Some tools expose P95 CPU as a column, but not all tools apply
+   the exact grouped threshold filter you asked for. Verify whether
+   the reported rows truly meet the post-aggregation CPU condition.
 
-3. **Which tool returned `monthly cost > $200` for the *actual* VM
-   instance?** `kafeju.get_instance_cost_and_specs` returns the
-   pricing-catalog **list price per machine type** (e.g. `$567` for
-   `n2-standard-16`). That's the price of the *template*, not the
-   billed cost for that specific VM over its real execution time.
-   The LLM re-labels the template price as each VM's *"Monthly
-   Cost"*.
+3. **Which tool computed grouped `cost = SUM(cost_actual.total_cost_usd)`
+   and then filtered `cost > 0.3` by `metadata.team`,
+   `resource_name`, and `vm_info.vm_type_actual`?**
+   If no single tool did this exact grouped calculation, the answer
+   is stitched from partial evidence.
 
 Now verify the real answer with a single ES|QL in Discover:
 
 ```esql
 FROM gcp-resource-executions-*
-| WHERE resource_usage.cpu.p95_percent < 10
-  AND cost_actual.total_cost_usd > 200
-  AND execution_time.duration_hours > 168
-| STATS cost = SUM(cost_actual.total_cost_usd)
-    BY metadata.workload_name, vm_info.vm_type_actual
+| STATS
+    avg_p95_cpu = ROUND(AVG(resource_usage.cpu.p95_percent), 1),
+    total_runtime_hours = ROUND(SUM(execution_time.duration_minutes) / 60, 1),
+    cost = ROUND(SUM(cost_actual.total_cost_usd), 2),
+    runs = COUNT(*)
+  BY metadata.team, resource_name, vm_info.vm_type_actual
+| WHERE avg_p95_cpu < 30
+  AND total_runtime_hours > 2
+  AND cost > 0.3
 | SORT cost DESC
 | LIMIT 10
 ```
 
-> **What you should see:** The real zombie list is usually much
-> **shorter** (or empty for some filter combos) than Kafeju's
-> list, and the VMs / costs will differ. Confabulation by **tool
-> chaining + prose stitching** — no single tool actually filters
-> on what you asked.
+> **What you should see:** You should get a small but non-empty list in
+> this workshop dataset. If Kafeju's narrative includes rows outside
+> these grouped thresholds, that's confabulation by **tool chaining +
+> prose stitching** — no single tool actually filtered on everything
+> you asked.
 
 ### Takeaway
 
 The gap isn't *"the agent can't answer"* — the agent is very
 willing to answer. The gap is that **no single tool applies the
 user's filter**, so the agent chains several tools, fills the
-missing filter in prose, and even **violates its own stated
-criteria** when the data doesn't match (for example a VM with
-**P95 CPU above 10%** still described as a “zombie”).
+missing filter in prose, and may still **violate its stated criteria**
+when the data doesn't match the natural-language summary.
 
 The only robust fix is a dedicated tool whose **ES|QL itself
 applies the filter** — which is exactly what you'll build in
