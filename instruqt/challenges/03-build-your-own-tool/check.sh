@@ -14,7 +14,7 @@ print('yes' if participant else 'no')
 " 2>/dev/null || echo "no")
 
 if [ "$TOOL_EXISTS" != "yes" ]; then
-  fail-message "No participant tool found. Create a tool with 'participant' in the ID using the curl command in Step 3."
+  fail-message "No participant tool found. Create a tool with 'participant' in its ID using Agent Builder > Tools (Step 3)."
   exit 1
 fi
 
@@ -22,7 +22,7 @@ AGENT_HAS_TOOL=$(curl -s -u "$ES_USER:$ES_PASS" "$KIBANA_URL/api/agent_builder/a
   -H "kbn-xsrf: true" | python3 -c "
 import sys, json
 agents = json.load(sys.stdin)['results']
-kafeju = next((a for a in agents if a['id'] == 'kafuju'), None)
+kafeju = next((a for a in agents if a['id'] in ('kafeju', 'kafuju')), None)
 if not kafeju:
     print('no')
 else:
@@ -32,7 +32,7 @@ else:
 " 2>/dev/null || echo "no")
 
 if [ "$AGENT_HAS_TOOL" != "yes" ]; then
-  fail-message "Your tool exists but is not wired into the Kafeju agent. Run the Step 4 command to add it."
+  fail-message "Your tool exists but is not wired into the Kafeju agent. Attach it on the Kafeju agent's Tools tab (Step 4)."
   exit 1
 fi
 

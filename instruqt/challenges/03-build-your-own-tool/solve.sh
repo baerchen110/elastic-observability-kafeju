@@ -23,7 +23,10 @@ curl -s -u "$ES_USER:$ES_PASS" "$KIBANA_URL/api/agent_builder/agents" \
   -H "kbn-xsrf: true" | python3 -c "
 import json, sys, subprocess
 agents = json.load(sys.stdin)['results']
-kafeju = next(a for a in agents if a['id'] == 'kafuju')
+kafeju = next((a for a in agents if a['id'] in ('kafeju', 'kafuju')), None)
+if not kafeju:
+    raise SystemExit('Kafeju agent not found')
+agent_id = kafeju['id']
 tools = kafeju['configuration']['tools'][0]['tool_ids']
 if 'participant.find_zombie_vms' not in tools:
     tools.append('participant.find_zombie_vms')
@@ -33,7 +36,7 @@ with open('/tmp/agent-update.json', 'w') as f:
     json.dump(kafeju, f)
 "
 
-curl -s -X PUT "$KIBANA_URL/api/agent_builder/agents/kafuju" \
+curl -s -X PUT "$KIBANA_URL/api/agent_builder/agents/$(python3 -c "import json; print(json.load(open('/tmp/agent-update.json'))['id'])")" \
   -u "$ES_USER:$ES_PASS" \
   -H "kbn-xsrf: true" \
   -H "Content-Type: application/json" \

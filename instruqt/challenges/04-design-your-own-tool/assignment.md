@@ -1,34 +1,3 @@
----
-slug: design-your-own-tool
-title: "Design Your Own Tool"
-teaser: "Choose a challenge card, design an ES|QL query, and build a tool the agent couldn't use before."
-type: challenge
-timelimit: 2400
-tabs:
-  - title: Kibana
-    type: service
-    hostname: elastic-vm
-    port: 5601
-notes:
-  - type: text
-    contents: |
-      # Design Your Own Tool
-
-      You have built one guided tool. Now it is time to design one yourself.
-
-      Choose a challenge card below based on your comfort level. Each card
-      gives you a business question, a target index, and hints — but you
-      write the ES|QL query and register the tool yourself.
-
-      **Remember the pattern:**
-      1. Explore the index in Discover to understand the fields
-      2. Write an ES|QL query that answers the business question
-      3. Test the query in Discover (does it return useful results?)
-      4. Register it as a tool in the Agent Builder UI
-      5. Wire it into the Kafeju agent in the Agents tab
-      6. Test with a natural-language prompt
----
-
 # Challenge 4: Design Your Own Tool
 
 Pick one of the challenge cards below. Each represents a real question
@@ -133,22 +102,29 @@ FROM gcp-billing-*
 `ml-predictions-growth-*`)
 
 **Explore first:**
-```sql
+```esql
 FROM ml-predictions-growth-*
 | LIMIT 10
 ```
 
-**Useful fields:** `team`, `current_avg_cpu`, `growth_rate_daily`,
-`predicted_days_to_90pct`, `recommendation`
+**Useful fields (all flat, top-level keys in each document):**
+`team`, `workload_type`, `current_cores_used`, `current_vm_capacity`,
+`growth_rate_percent_per_week`, `weeks_until_90_percent_capacity`,
+`recommendation`, `confidence`
+
+> **Schema check for this card:** the growth index in this workshop
+> exposes `weeks_until_90_percent_capacity` (not
+> `predicted_days_to_90pct`) and `growth_rate_percent_per_week` (not
+> `growth_rate_daily`).
 
 **Hints:**
-- Filter where `predicted_days_to_90pct` is small (e.g. `< 60`) —
+- Filter where `weeks_until_90_percent_capacity` is low (e.g. `< 12`) —
   most urgent first
-- Sort by `predicted_days_to_90pct ASC`
-- Include `recommendation` (values include `URGENT_RESIZE`,
-  `PLAN_RESIZE`, `MONITOR`)
-- `growth_rate_daily` is a fractional daily growth rate (e.g. `0.12`
-  = 12% per day). Multiply by 100 to show a percentage.
+- Sort by `weeks_until_90_percent_capacity ASC`
+- Include `recommendation` (values include `PLAN_RESIZE`, `MONITOR`,
+  and `OPTIMIZE_FIRST`)
+- `growth_rate_percent_per_week` is already expressed as percent points
+  per week in this dataset; do not multiply by 100 again.
 
 **Suggested tool ID:** `participant.capacity_forecast`
 
@@ -157,24 +133,34 @@ FROM ml-predictions-growth-*
 <details>
 <summary><strong>Example ES|QL solution</strong> (click to reveal — instructor hint)</summary>
 
-```sql
+```esql
 FROM ml-predictions-growth-*
-| WHERE predicted_days_to_90pct < 60
-| STATS latest_days = MIN(predicted_days_to_90pct),
-        latest_growth = AVG(growth_rate_daily),
-        latest_cpu    = AVG(current_avg_cpu),
-        latest_reco   = VALUES(recommendation)
+| KEEP team, workload_type, current_cores_used, current_vm_capacity,
+       growth_rate_percent_per_week, weeks_until_90_percent_capacity,
+       recommendation, confidence
+| WHERE weeks_until_90_percent_capacity IS NOT NULL
+| WHERE weeks_until_90_percent_capacity < 12
+| EVAL current_utilization_pct = ROUND((current_cores_used / current_vm_capacity) * 100, 1)
+| STATS soonest_weeks_to_90 = MIN(weeks_until_90_percent_capacity),
+        avg_growth_pct_per_week = ROUND(AVG(growth_rate_percent_per_week), 2),
+        avg_current_utilization_pct = ROUND(AVG(current_utilization_pct), 1),
+        latest_reco   = VALUES(recommendation),
+        confidence_levels = VALUES(confidence)
     BY team
-| EVAL growth_pct_per_day = ROUND(latest_growth * 100, 2)
-| KEEP team, latest_cpu, growth_pct_per_day, latest_days, latest_reco
-| SORT latest_days ASC
+| KEEP team, soonest_weeks_to_90, avg_growth_pct_per_week,
+       avg_current_utilization_pct, latest_reco, confidence_levels
+| SORT soonest_weeks_to_90 ASC
 | LIMIT 20
 ```
 
-Note: the growth index has one document per (team, day) snapshot.
-The `STATS ... BY team` pass collapses the snapshots into one row
-per team with the most-urgent days-to-90% and the latest
-recommendation.
+Notes:
+
+- Some teams have `weeks_until_90_percent_capacity = null` because they
+  are not currently projected to hit 90% soon. Filtering out null values
+  focuses the result on teams with concrete near-term capacity pressure.
+- The `STATS ... BY team` pass collapses multiple snapshots into one row
+  per team with the most-urgent weeks-to-90% and the latest
+  recommendation.
 
 </details>
 
@@ -233,42 +219,21 @@ headline number the agent will narrate back.
 
 ---
 
-## Register and Wire Your Tool (UI)
+## Register and Wire Your Tool
 
 Once your query works in Discover, follow the same UI flow you used in
 Challenge 3 — no terminal needed.
 
-### Register the tool
+### Register the tool (As you did in the previous challenge)
 
-1. Hamburger menu > **Agent Builder** > **Tools** tab.
-2. Click **Create** (or **New tool**).
-3. Fill in the form:
 
-   | Field | Value |
-   |-------|-------|
-   | **Tool ID** | `participant.YOUR_TOOL_NAME` (e.g. the suggested ID on your card) |
-   | **Type** | `ESQL` |
-   | **Description** | A sentence or two describing *when* the agent should call this tool. Be specific — this is routing logic for the AI. |
-   | **Labels** | `participant` (plus any others from the card, e.g. `cost`, `infrastructure`) |
-   | **ES\|QL Query** | Paste your query from Discover |
+### Wire it into the Kafeju agent (As you did in the previous challenge)
 
-4. Click **Save & Test** and **Submit**. Confirm the `tabular_data`
-   response has the columns you expect.
-5. Click **Save** to persist the tool.
-
-### Wire it into the Kafeju agent
-
-1. In Agent Builder, click the **Agents** tab.
-2. Open the **Kafeju** agent and click **Edit** (pencil icon).
-3. Scroll to the **Tools** section.
-4. Click **Add tool**, search for `participant`, and select your new
-   tool.
-5. Click **Save** (or **Update agent**).
 
 ## Test Your Tool
 
-Go to **Kibana > AI Assistant > Kafeju** and ask the **test prompt**
-from your card. Expand the **tool-call / reasoning panel** under
+Go to **Kibana > AI Agent > Kafeju** and ask the **test prompt**
+from your card. Expand the **reasoning panel** under
 Kafeju's answer and confirm `participant.YOUR_TOOL_NAME` was the
 tool that ran.
 
@@ -280,11 +245,8 @@ tool that ran.
 
 ## Check Your Work
 
-The automated check verifies that at least **two** participant tools
-exist (the zombie detector from Challenge 3 + your new tool) and that
-both are attached to the Kafeju agent.
 
-Before clicking **Check**, confirm in the UI:
+Before clicking **Next**, confirm in the UI:
 - The **Tools** tab shows your new `participant.*` tool.
 - The **Agents** tab > **Kafeju** page lists it alongside the
   zombie detector.

@@ -14,8 +14,9 @@ notes:
     contents: |
       # Getting Further
 
-      You have built two tools. The Kafeju agent already had 15.
-      Now you have 17+ tools working together.
+      You have built two tools. Kafeju already had a set of built-in
+      tools for pricing, drift, and optimization.
+      Now they can work together.
 
       In this final challenge, you will ask compound questions that
       require **multiple tools to chain together** — producing answers
@@ -29,7 +30,7 @@ notes:
 
 ## The Compound Question
 
-Open the **AI Assistant** > **Kafeju** and ask:
+Open the **AI Agent** > **Kafeju** and ask:
 
 ```
 I just found zombie VMs in my infrastructure. Can you tell me which region would be cheapest to move the surviving workloads to, and estimate my monthly savings if I rightsize and relocate?
@@ -38,17 +39,25 @@ I just found zombie VMs in my infrastructure. Can you tell me which region would
 ### Watch the agent chain tools
 
 Expand the **reasoning / tool-call panel** under Kafeju's answer —
-you should see the agent run **4–5 tool calls**, with a short
+you should see the agent run **3–5 tool calls**, with a short
 reasoning note in between each one explaining *why* it's calling the
-next tool:
+next tool. The exact chain can vary by run/model:
 
 | # | Tool | Why it runs |
 |---|------|-------------|
 | 1 | **`participant.find_zombie_vms`** *(your tool)* | Identify the idle VMs, their teams, machine types, and cost impact. |
 | 2 | **`kafeju.get_instance_cost_and_specs`** | Look up pricing for the current machine type (expect `n2-standard-32`) across regions. |
-| 3 | **`kafeju.compare_instance_options`** | Find smaller, cost-optimized alternatives that still meet the workload's footprint. |
-| 4 | **`kafeju.calculate_cost_optimization_1`** | Analyse P95 CPU / memory and drift to compute right-sized specs with a 20% safety headroom. |
-| 5 | **`kafeju.get_instance_cost_and_specs`** *(again)* | Price the recommended right-sized types so it can compute savings. |
+| 3 | **`kafeju.compare_instance_options`** *(optional in some runs)* | Find smaller, cost-optimized alternatives that still meet the workload's footprint. |
+| 4 | **`kafeju.calculate_cost_optimization_1`** *(optional in some runs)* | Analyse P95 CPU / memory and drift to compute right-sized specs with a 20% safety headroom. |
+| 5 | **`kafeju.get_instance_cost_and_specs`** *(optional repeat)* | Price the recommended right-sized types so it can compute savings. |
+
+You may also see a shorter chain like:
+
+1. `participant.find_zombie_vms`
+2. `kafeju.get_instance_cost_and_specs`
+3. `kafeju.calculate_cost_optimization_1`
+
+That is still a correct multi-tool composition.
 
 Every row in the panel is an **ES\|QL query** the agent wrote and
 executed against your data. Click any row to see the query + the
@@ -56,27 +65,32 @@ raw  response that fed the next reasoning step.
 
 ### What the answer should look like
 
-Kafeju weaves the five tool calls into a structured recommendation.
-In the workshop dataset you should see something close to:
+Kafeju should weave the tool calls into a structured recommendation.
+Because LLM synthesis is non-deterministic, **do not expect identical
+wording or identical savings numbers every run**. Validate by checking
+that the answer is grounded in tool output from this dataset:
 
-- **Cheapest region:** `us-central1` *(note: all rows in the
-  **GCP Pricing Catalog** data view live in `us-central1` for this
-  workshop — so "cheapest region" here is really "only region in
-  the catalog". Good reminder that tool output is only as rich as
-  the data underneath.)*
-- **Current machine type:** `n2-standard-32` — ~**$1,134/month** per VM
-- **Recommended rightsize:** `e2-standard-4` (~$98/mo) or
-  `n2-standard-4` (~$142/mo), sized for P95 + 20% headroom
-- **Estimated savings:** **~$990–$1,036/month per VM**
-- **Risk / priority:** Low / P0
+- **Region conclusion:** usually `us-central1` *(for this workshop,
+  the pricing catalog is effectively single-region, so "cheapest" is
+  constrained by available catalog rows).*
+- **Current machine context:** often references `n2-standard-32` for
+  zombie/idle workloads.
+- **Rightsizing narrative:** proposes smaller instance families/sizes
+  based on drift and utilization evidence.
+- **Savings estimate:** should be directionally large (material
+  monthly reduction), but exact per-VM and total numbers may vary.
+- **Priority/risk statement:** may vary (`P0`, "low risk", etc.).
+
+If your run reports a different savings range (for example "~$850-$990
+per VM" and ">$6,000/month total"), that is acceptable if the
+reasoning panel shows the data path and ES|QL evidence.
 
 A compound question that could have taken a FinOps analyst hours of
-manual spreadsheeting is now a single prompt — because the custom
-tool you built in Challenge 3 composes with the 15 built-ins that
-shipped with Kafeju.
+manual spreadsheeting is now a single prompt — because your custom
+tools compose with Kafeju's built-in tools.
 
 **Key insight:** You built two tools in under 30 minutes. Combined with
-the existing 15, the agent can now answer FinOps questions that would
+the existing built-ins, the agent can now answer FinOps questions that would
 take a human analyst hours to research manually.
 
 ## Experiment: More Compound Questions

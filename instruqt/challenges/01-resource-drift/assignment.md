@@ -1,4 +1,4 @@
-# Challenge 1: From Consumer to Creator
+# Challenge 1: Use the custom agent
 
 ## About this challenge
 
