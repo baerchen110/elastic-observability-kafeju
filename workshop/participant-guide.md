@@ -25,7 +25,13 @@ But what happens when you need analysis that no built-in tool provides?
 
 ### Meet the Kafeju Agent
 
-Kafeju is a custom GCP cost-optimization agent built with Elastic Agent Builder. It analyzes VM resource utilization, detects drift between allocated and actual usage, and recommends rightsizing.
+**Kafeju** takes its name from Greek *καφετζού* (*kafetzoú*): the café
+tradition of **reading the cup to predict what comes next**—a fortune
+teller’s move, but here entirely **data-driven**. VM executions, pricing,
+billing, and ML models are the “grounds”; the agent forecasts drift,
+waste, risk, and savings paths on GCP. Kafeju is a custom cost-optimization
+agent built with Elastic Agent Builder—it analyzes utilization, detects
+drift between allocated and actual usage, and recommends rightsizing.
 
 Your facilitator will demonstrate:
 1. Asking Kafeju: *"Which teams are wasting the most money on idle VMs?"*

@@ -1,42 +1,17 @@
----
-slug: from-consumer-to-creator
-title: "From Consumer to Creator"
-teaser: "Get familiar with the data and dashboards, then see what the Kafeju agent can — and can't — do."
-type: challenge
-timelimit: 1500
-tabs:
-  - title: Kibana
-    type: service
-    hostname: elastic-vm
-    port: 5601
-notes:
-  - type: text
-    contents: |
-      # From Consumer to Creator
-
-      In Workshop 1, you used the Observability AI Assistant with built-in
-      tools. The tools were pre-made — you were a **consumer** of AI.
-
-      In this workshop, you become a **creator**. You will build your own
-      tools and wire them into a custom agent called **Kafeju** — a GCP
-      cost-optimization agent that detects resource drift and recommends
-      rightsizing.
-
-      Before touching the agent, we'll get familiar with the **data** it
-      works on, using Discover and the pre-built dashboards. Once you
-      know what the raw data looks like, the agent's answers will make
-      much more sense.
----
-
 # Challenge 1: From Consumer to Creator
 
 ## About this challenge
 
-**Kafeju** (a coffee-themed codename — think *café* for your cloud bill)
-is the custom agent you will extend during this workshop. It analyzes
-Google Cloud VM usage, detects **resource drift** (the gap between what a
-team *asked for* and what they *actually use*), and recommends
-rightsizing to cut cost.
+**Kafeju** echoes the Greek *καφετζού* (*kafetzoú*): the café figure who
+reads the cup to **tell fortunes**—to infer what is likely to happen next
+from what is left behind. In this workshop the metaphor is deliberate but
+**secular**: instead of mysticism, Kafeju uses **GCP execution metrics,
+pricing, billing, and ML** to make **evidence-backed predictions**—where
+drift will hurt the budget, which workloads look idle, what anomalies and
+growth models flag, and where rightsizing might pay off. It is the custom
+agent you will extend; it analyzes VM usage, detects **resource drift**
+(the gap between what a team *asked for* and what they *actually use*),
+and points toward rightsizing to cut cost.
 
 The environment has already been pre-loaded for you with:
 
@@ -269,11 +244,6 @@ needed.
 Before clicking **Check**, confirm you can answer *yes* to each of
 these:
 
-- I logged into Kibana and set the time range to **Last 1 year**.
-- I explored at least the **executions**, **pricing**, and
-  **ML predictions** data in Discover.
-- I opened all three pre-built dashboards and can describe, in one
-  sentence, what each one shows.
 - I asked Kafeju at least **one question it answered well** and
   **one question it couldn't answer well**.
 - I opened the **Agent Builder UI**, found the Kafeju agent, and can
