@@ -238,9 +238,7 @@ check the tool's ES|QL against your actual intent.
 Let's look under the hood — entirely in the Kibana UI, no terminal
 needed.
 
-1. Open **Agent Builder** (often under the top-right **⋯** menu or
-   the main Kibana menu — exact placement depends on your Kibana
-   build).
+1. Open **Agent Builder** (Search **Agents** in the App search bar on the top).
 2. Open the **Agents** tab and select the **Kafeju** agent.
 3. Open the **Tools** tab. Use the search bar if needed so the list
    shows only tools attached to Kafeju.

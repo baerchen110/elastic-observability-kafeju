@@ -300,7 +300,7 @@ For each prompt below, in the Kafeju chat:
 3. In **Agent Builder / Tools** (or from Step 3), re-read that
    tool's **description** and **ES|QL query**. Does the query
    actually compute what the user asked for?
-4. Cross-check with the small ES|QL snippet provided, in
+4. Cross-check with the ES|QL snippet provided, in
    **Discover > ES|QL mode**.
 
 ### Prompt A — regional pricing (gap)
@@ -375,12 +375,6 @@ FROM gcp-resource-executions-*
 | SORT cost DESC
 | LIMIT 10
 ```
-
-> **What you should see:** You should get a small but non-empty list in
-> this workshop dataset. If Kafeju's narrative includes rows outside
-> these grouped thresholds, that's confabulation by **tool chaining +
-> prose stitching** — no single tool actually filtered on everything
-> you asked.
 
 ### Takeaway
 
