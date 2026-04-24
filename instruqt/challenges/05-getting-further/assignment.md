@@ -1,35 +1,7 @@
----
-slug: getting-further
-title: "Getting Further: Multi-Tool Chaining"
-teaser: "See the agent chain your custom tools with existing tools to answer compound questions."
-type: challenge
-timelimit: 1800
-tabs:
-  - title: Kibana
-    type: service
-    hostname: elastic-vm
-    port: 5601
-notes:
-  - type: text
-    contents: |
-      # Getting Further
-
-      You have built two tools. Kafeju already had a set of built-in
-      tools for pricing, drift, and optimization.
-      Now they can work together.
-
-      In this final challenge, you will ask compound questions that
-      require **multiple tools to chain together** — producing answers
-      that no single tool could provide alone.
-
-      This is the power of extensible AI agents: the whole is greater
-      than the sum of the parts.
----
-
 # Challenge 5: Getting Further — Multi-Tool Chaining
 
 ## The Compound Question
-
+===
 Open the **AI Agent** > **Kafeju** and ask:
 
 ```
@@ -94,7 +66,7 @@ the existing built-ins, the agent can now answer FinOps questions that would
 take a human analyst hours to research manually.
 
 ## Experiment: More Compound Questions
-
+===
 Try these compound questions that exercise multiple tools:
 
 ```
@@ -114,7 +86,7 @@ build a narrative answer. Each tool returns a data table; the AI
 interprets and connects them.
 
 ## Reflect: Before vs After
-
+===
 Think back to Challenge 1:
 - **Before:** You asked about zombie VMs and cheapest regions. The
   agent guessed, hallucinated, or said it couldn't help.
@@ -125,7 +97,7 @@ Think back to Challenge 1:
 the AI model. Just **two tools** — ~10 lines of ES|QL each.
 
 ## Key Takeaways
-
+===
 Write down your top 3 takeaways. Here are prompts:
 
 1. What surprised you about how easy/hard it was to build a tool?
@@ -133,7 +105,7 @@ Write down your top 3 takeaways. Here are prompts:
 3. What tool would you build first for your own data at work?
 
 ## Bonus: Improve a Tool Description (UI)
-
+===
 A common issue: the AI doesn't invoke your tool when you expect it
 to. This is almost always a **description problem** — Kafeju picks
 tools by matching the user's intent against each tool's description.
@@ -183,7 +155,7 @@ tools by matching the user's intent against each tool's description.
 > pick this tool instead of another one?"*
 
 ## Summary: What You Built Today
-
+===
 - Explored GCP resource data in Elasticsearch
 - Dissected an existing Agent Builder tool
 - Built a Zombie VM Detector from scratch
@@ -196,6 +168,6 @@ tools by matching the user's intent against each tool's description.
 a short UI form and ~10 lines of ES|QL.**
 
 ## Check Your Work
-
+===
 This challenge is complete when you have successfully asked at least
 one compound question and received a multi-tool answer.

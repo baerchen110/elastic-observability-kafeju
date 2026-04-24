@@ -37,6 +37,7 @@ Kafeju agent and identify where its current tools fall short.
 ---
 
 ## Step 1: Explore the Data in Discover
+===
 
 Before asking an AI anything, *you* should know what data exists.
 
@@ -72,6 +73,8 @@ Before asking an AI anything, *you* should know what data exists.
 ---
 
 ## Step 2: Tour the Pre-Built Dashboards
+===
+
 
 Now let's see the same data visually. Open the hamburger menu >
 **Analytics** > **Dashboard** and open each dashboard in turn. (Make
@@ -113,6 +116,8 @@ Panels show:
 ---
 
 ## Step 3: Meet Kafeju — Ask What It *Can* Do
+===
+
 
 With the data fresh in your mind, let's see the agent in action.
 
@@ -156,6 +161,8 @@ tool ID in the reasoning panel.
 ---
 
 ## Step 4: Find the Gap
+===
+
 
 Now ask two questions that *sound* reasonable. Kafeju will give you
 **confident-looking answers to both** — but for each one, expand the
@@ -234,6 +241,9 @@ check the tool's ES|QL against your actual intent.
 ---
 
 ## Step 5: Inspect Kafeju's Tools in the Agent Builder UI
+===
+
+
 
 Let's look under the hood — entirely in the Kibana UI, no terminal
 needed.
@@ -264,6 +274,9 @@ needed.
 ---
 
 ## Check Your Work
+===
+
+
 
 Before clicking **Next**, confirm you can answer *yes* to each of
 these:

@@ -4,14 +4,14 @@ Four ML anomaly-detection jobs have already been run on the GCP data.
 You will start by looking at those jobs and their results in the Kibana
 ML UI, then follow the same results all the way to a Kafeju answer.
 
----
 
 ## Step 1: Meet the ML Jobs
+===
 
-1. In Kibana, confirm the time picker (top-right) is set to **Last 1 year**.
-2. In the app search bar, type **jobs** and select **Machine learning / Anomaly Detection jobs**
+
+1. In the app search bar, type **jobs** and select **Machine learning / Anomaly Detection jobs**
 ![Screenshot 2026-04-23 at 15.06.16.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/cef1cb2590cd48f47bfe8b46152cd589/assets/Screenshot%202026-04-23%20at%2015.06.16.png)
-3. You should see four jobs already created and run:
+2. You should see four jobs already created and run:
 ![Screenshot 2026-04-23 at 15.08.35.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/2b787325b212a5ba6c97c24d69321793/assets/Screenshot%202026-04-23%20at%2015.08.35.png)
 
 | Job ID | What it detects | Partition / "over" field |
@@ -49,7 +49,7 @@ You'll see `.ml-anomalies-*` in action in the next steps.
 ---
 
 ## Step 2: Explore Detected Anomalies in the UI (~10 min)
-
+===
 ### 2a. Anomaly Explorer
 
 1. On the **Jobs** page, select `vm-capacity-planning` (and
@@ -67,12 +67,12 @@ You'll see `.ml-anomalies-*` in action in the next steps.
    - `actual` — what the VM's CPU/memory actually was in that bucket.
    - `typical` — what the model expected, based on peer VMs and
      history.
-   - `anomaly_score` — severity (0–100).
+   - `score` — severity (0–100).
 
 > **What you should see:** One or two VMs/teams dominating the
 > anomalies, with `actual` values far above `typical` (e.g. 95% CPU
 > when the model expected ~15%). Using the same thresholds the
-> Kafeju tool applies, an `anomaly_score` ≥ 75 is **CRITICAL**,
+> Kafeju tool applies, an `score` ≥ 75 is **CRITICAL**,
 > ≥ 50 is **HIGH**, ≥ 25 is **MEDIUM**, below that is **LOW**.
 >
 > **Why it matters:** This is the ground truth. Any question a user
@@ -135,7 +135,7 @@ one raw document.
 ---
 
 ## Step 3: Dissect the ML Tool in the Agent Builder UI
-
+===
 Now let's see how Kafeju consumes those predictions.
 
 1. In the app search bar, type **Agent tools** and select **Agent / Tools**
@@ -220,7 +220,7 @@ the `workload-growth-rate` job's output). Two tools, same recipe.
 ---
 
 ## Step 4: Run the Tool Two Ways
-
+===
 You've already read the tool's ES|QL. Now run the tool and see what
 it actually returns — first on its own (via Agent Builder's Test
 panel), then indirectly through a natural question to Kafeju — and
@@ -285,8 +285,8 @@ Is anything unusual happening on our VMs lately?
 
 ---
 
-## Step 5: Spot the Gaps — Don't Trust, Verify (~10 min)
-
+## Step 5: Spot the Gaps — Don't Trust, verify
+===
 Modern LLMs rarely say *"I can't answer that."* They pick the
 closest-looking tool, run it, and re-narrate the result as if it
 answered your actual question. Here you'll practice telling a
@@ -294,8 +294,9 @@ answered your actual question. Here you'll practice telling a
 
 For each prompt below, in the Kafeju chat:
 
-1. Ask the prompt.
-2. Open the **tool-call / reasoning panel**: which `kafeju.*` tool
+1. Start a **new chat thread** (recommended) and ask the prompt.
+   Reusing the same thread can bias tool selection from previous turns.
+2. Open the **reasoning panel**: which `kafeju.*` tool
    (if any) was called?
 3. In **Agent Builder / Tools** (or from Step 3), re-read that
    tool's **description** and **ES|QL query**. Does the query
@@ -309,8 +310,8 @@ For each prompt below, in the Kafeju chat:
 Compare the hourly price of n2-standard-8 across at least three GCP regions and rank them from cheapest to most expensive.
 ```
 
-Kafeju will likely give a confident answer like *"us-central1 is
-cheapest"*. Verify:
+Kafeju may give a confident answer like *"us-central1 is cheapest"*.
+Now verify what the dataset can actually support:
 
 ```esql
 FROM gcp-pricing-catalog
@@ -319,14 +320,47 @@ FROM gcp-pricing-catalog
 ```
 ![Screenshot 2026-04-23 at 15.25.56.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/6aecccd1fb3f2125136da4f88401e39f/assets/Screenshot%202026-04-23%20at%2015.25.56.png)
 
-> **What you should see:** The verification query tells you **how
-> many regions actually exist** in the workshop **GCP Pricing
-> Catalog** for `n2-standard-8`, and which is cheapest among *those*
-> rows. The seed data usually lists only a **small handful** of
-> regions — not a global GCP price matrix. If Kafeju sounded as if
-> it compared **at least three** regions (or the whole public cloud),
-> that narrative is **not supported** by the catalog alone —
-> confabulated.
+Then run:
+
+```esql
+FROM gcp-pricing-catalog
+| WHERE machine_type == "n2-standard-8"
+| KEEP region, cost_per_hour_usd, cost_per_month_usd
+| SORT cost_per_hour_usd ASC
+```
+
+Why run this exercise even if the agent answer matches ES|QL?
+
+- The goal is not to "catch" the model being wrong every time.
+- The goal is to prove whether the answer is **fully supported** by
+  tool/query evidence in *your* dataset.
+- In some runs, Kafeju may genuinely return the same conclusion as the
+  verification query. That is still a success for this exercise,
+  because you validated the claim with data instead of trust.
+
+> **Expected outcomes (both are valid learning outcomes):**
+>
+> - **Grounded answer:** Kafeju says there are not enough regions in
+>   this dataset to rank "at least three", and only reports what exists
+>   (for example just `us-central1`).  
+>   -> This is correct and evidence-based.
+>
+> - **Confabulated answer:** Kafeju claims it ranked at least three
+>   regions (or all GCP regions), but the ES|QL output shows fewer
+>   regions.  
+>   -> This is unsupported narrative.
+>
+> A subtle failure mode is **self-contradiction**: the response says
+> "ranked three regions" but then lists only one region. Treat that as
+> ungrounded reasoning.
+>
+> **How to interpret `STATS n = COUNT(*) BY region`:**
+> - `n` is how many catalog rows exist per region for
+>   `n2-standard-8`.
+> - If you see one region, then "cheapest region" really means
+>   "only region available in this dataset for that machine type."
+> - If you see multiple regions, then you should run a second query
+>   sorted by price to rank them explicitly.
 
 ### Prompt B — zombie VMs (gap by tool chaining)
 
@@ -334,10 +368,10 @@ FROM gcp-pricing-catalog
 List likely zombie workloads by team and VM type: low average P95 CPU, meaningful cumulative runtime, and non-trivial cumulative cost. Return the top 10 by cost.
 ```
 
-This time Kafeju will probably **chain 3–5 `kafeju.*` tools** and
-hand you a polished top-10 list with confident zombie labels. It may
-look grounded, but you still need to verify whether any single tool
-actually applies the full filter logic.
+For this prompt, Kafeju may use **one tool** or **several tools**
+(tool choice varies by model run and chat context). Either way, you
+still need to verify whether any invoked tool actually applies the
+full filter logic.
 
 Open the **Reasoning** panel and answer these three questions for
 yourself:
@@ -345,19 +379,20 @@ yourself:
 1. **Which tool computed and filtered `total_runtime_hours > 2`?**
    The verification logic uses:
    `ROUND(SUM(execution_time.duration_minutes) / 60, 1)` and then a
-   `WHERE total_runtime_hours > 2` filter. Check whether any invoked
-   tool actually does that full aggregation + filter.
+   `WHERE total_runtime_hours > 2` filter. In most runs, the correct
+   answer is **none** — no single invoked tool does that full
+   aggregation + filter.
 
 2. **Which tool filtered on `avg_p95_cpu < 30` after aggregation?**
    Some tools expose P95 CPU as a column, but not all tools apply
-   the exact grouped threshold filter you asked for. Verify whether
-   the reported rows truly meet the post-aggregation CPU condition.
+   the exact grouped threshold filter you asked for. In most runs,
+   the answer is again **none**.
 
 3. **Which tool computed grouped `cost = SUM(cost_actual.total_cost_usd)`
    and then filtered `cost > 0.3` by `metadata.team`,
    `resource_name`, and `vm_info.vm_type_actual`?**
-   If no single tool did this exact grouped calculation, the answer
-   is stitched from partial evidence.
+   If no single tool did this exact grouped calculation (typically
+   **none**), the final answer is stitched from partial evidence.
 
 Now verify the real answer with a single ES|QL in Discover:
 
@@ -391,7 +426,7 @@ Challenge 3 (a real zombie-VM tool) and design in Challenge 4.
 ---
 
 ## Check Your Work
-
+===
 Before clicking **Next**, confirm:
 
 - I opened the **Anomaly Detection Jobs** page and can name at

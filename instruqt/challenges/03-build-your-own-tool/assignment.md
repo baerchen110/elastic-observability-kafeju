@@ -3,14 +3,13 @@
 A "zombie VM" is a virtual machine running at near-zero CPU
 utilization on an expensive machine type — it costs money but does
 nothing useful. Every cloud team has them.
-
 You will now build a tool that finds them, register it in the
 Agent Builder UI, wire it into the Kafeju agent, and test it with
 a natural-language prompt. Everything happens in Kibana — no
 terminal or API calls required.
 
 ## Step 1: Design the Query
-
+===
 Think about what you need:
 
 - **Data view:** **GCP Resource Executions** — has CPU usage and cost
@@ -20,11 +19,23 @@ Think about what you need:
 - **Metrics:** Average CPU, drift score, total cost, occurrence count
 - **Sort:** By cost descending (most expensive zombies first)
 
-## Step 2: Test the Query in Discover
+> **Token budget tip (important for tools):**
+> - `LIMIT` is the strongest control for token usage. Tool results are
+>   passed back to the model; more rows means more tokens, higher cost,
+>   and slower responses.
+> - `KEEP` also reduces tokens by reducing the number of columns
+>   returned.
+> - Use both whenever possible: filter/aggregate first, then `KEEP`
+>   only the columns the answer needs, then `LIMIT` to a reasonable row
+>   count (often 10-50 rows for agent tools).
+> - In this specific query, `STATS ... BY` already narrows output to a
+>   compact schema, and `LIMIT 15` caps row volume.
 
+## Step 2: Test the Query in Discover
+===
 Open **Kibana > Discover > ES|QL mode** and run:
 
-```esql
+```sql
 FROM gcp-resource-executions-*
 | WHERE resource_usage.cpu.avg_percent < 15
   AND vm_info.vm_type_actual IS NOT NULL
@@ -38,8 +49,10 @@ FROM gcp-resource-executions-*
 | LIMIT 15
 ```
 
-![Screenshot 2026-04-23 at 16.09.21.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/0621d0d81a2b78422054e991c8905069/assets/Screenshot%202026-04-23%20at%2016.09.21.png)
+Why `LIMIT 15` here? It keeps the result focused on the highest-impact
+zombie workloads while keeping the tool response compact for the model.
 
+![Screenshot 2026-04-23 at 16.09.21.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/0621d0d81a2b78422054e991c8905069/assets/Screenshot%202026-04-23%20at%2016.09.21.png)
 You should see results showing teams with low-CPU VMs and their costs.
 If results appear, the query works and you can proceed.
 
@@ -49,10 +62,8 @@ year**) and verify the field names by expanding a document in Discover.
 Keep this query handy — you'll paste it into the tool in the next step.
 
 ## Step 3: Register the Tool in the Agent Builder UI
-
-1. In the app search bar, type **Agent tools** and select **Agent / Tools**
-   (wording may vary slightly by Kibana build).
-
+===
+1. In the app search bar, type **Agent tools** and select **Agents / Tools**
 ![Screenshot 2026-04-23 at 15.19.34.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/55f58451546db5499b9c307574cab2d3/assets/Screenshot%202026-04-23%20at%2015.19.34.png)
 2. Click **New tool**
 3. Fill in the form:
@@ -63,83 +74,71 @@ Keep this query handy — you'll paste it into the tool in the next step.
   | **Type**        | `ESQL`                                                                                                                                                                                                                           |
   | **Description** | *Finds zombie VMs: machines with very low CPU usage (under 15%) that are wasting money. Shows which teams have idle resources ranked by total cost waste. Use when asked about zombie VMs, idle instances, or wasted resources.* |
   | **Labels**      | `participant`, `infrastructure`, `cost`                                                                                                                                                                                          |
-  | **ES\|QL Query** | Paste the exact query from Step 2                                                                                                                                                                                               |
+  | **ES\|QL Query**| Paste the exact query from Step 2                                                                                                                                                                                                |
 
 ![Screenshot 2026-04-23 at 16.12.23.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/53bc86a884b78e02d192433b146cbf65/assets/Screenshot%202026-04-23%20at%2016.12.23.png)
-
-> **Why the description matters:** When Kafeju receives a question,
-> it scans every tool's description to decide which one to call.
-> The phrase *"Use when asked about zombie VMs, idle instances, or
-> wasted resources"* is routing signal — make it explicit.
-
+  > **Why the description matters:** When Kafeju receives a question,
+  > it scans every tool's description to decide which one to call.
+  > The phrase *"Use when asked about zombie VMs, idle instances, or
+  > wasted resources"* is routing signal — make it explicit.
 4. Click **Save & Test** to sanity-check the tool:
    - This tool takes no inputs, so just click **Submit**.
-   - In the **Response** panel, scroll down and confirm you see values
-     with fields `avg_cpu`, `avg_drift`,
+   - In the **Response** panel, scroll down
+     confirm you see values with fields `avg_cpu`, `avg_drift`,
      `total_cost`, `occurrences`, `metadata.team`,
      `vm_info.vm_type_actual`, `resource_name`.
    - The rows should match what you saw in Discover in Step 2.
 
 ![Screenshot 2026-04-23 at 16.13.09.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/9696533aea8eaafb180e7a040286e8d6/assets/Screenshot%202026-04-23%20at%2016.13.09.png)
-
 5. Close the flyout.
 6. Verify the tool appears in the **Tools** list. Type `participant` in
   the filter — you should see `participant.find_zombie_vms`.
 ![Screenshot 2026-04-23 at 16.15.18.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/4a652d508a59d832c61971e385420b3f/assets/Screenshot%202026-04-23%20at%2016.15.18.png)
-
 > **What you should see:** A new row in the Tools tab whose ID starts
 > with `participant.`. The tool page shows the same three components
 > you dissected in Challenge 2 — **ID**, **description**, **ES|QL
 > query**.
 
 ## Step 4: Wire the Tool Into the Kafeju Agent
-
+===
 The tool exists, but the Kafeju agent doesn't know about it yet. In
 Agent Builder you attach tools to agents explicitly.
 
-1. In the app search bar, type **agents** and open **Agents**.
+1. In the App search bar, type **agents** and click on **Agents**.
 ![Screenshot 2026-04-23 at 16.17.28.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/304da552ede06aa5f5ea97cfd4befefc/assets/Screenshot%202026-04-23%20at%2016.17.28.png)
-2. Top-right: click **More** (or **⋯**) and choose **View all agents** if
-   you do not already see the agent list. Open the **Kafeju** agent.
+2. On the top right, click on **More** and select **View all agents**. Click to open the **Kafeju** agent.
 ![Screenshot 2026-04-23 at 16.17.49.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/0aaaf8ecd816e7db1a6b3569e7eee3db/assets/Screenshot%202026-04-23%20at%2016.17.49.png)
 
-3. Open the **Tools** tab — this is the list of tools the agent is
-   allowed to call.
+3. Click on **Tools** tab — this is the list of tools the
+  agent is allowed to call.
 4. Search for `participant`.
 5. Select **`participant.find_zombie_vms`** to attach it.
 ![Screenshot 2026-04-23 at 16.22.01.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/866349baef9bbb786a953543bd000712/assets/Screenshot%202026-04-23%20at%2016.22.01.png)
-6. Click **Save**.
-7. Confirm it now appears in the Kafeju tools list alongside the
+7. Click **Save**
+8. Confirm it now appears in the Kafeju tools list alongside the
    existing `kafeju.*` tools.
 ![Screenshot 2026-04-23 at 16.23.13.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/2e2427de0f108ede20ad0abadf3a018a/assets/Screenshot%202026-04-23%20at%2016.23.13.png)
 
 > **What you should see:** The Kafeju agent's tool list now includes
-> `participant.find_zombie_vms`. The workshop ships **10** built-in
-> `kafeju.*` tools; after you attach yours, expect **11** tools total
-> (unless your facilitator added extras).
->
-> **Why this step exists:** Creating a tool and attaching it to an
-> agent are two separate actions. A tool that isn't attached to any
-> agent is invisible to Kafeju — the agent will never pick it up,
-> no matter how good the description is.
+> `participant.find_zombie_vms`. If the list previously had 15
+> `kafeju.*` tools, it should now show 16.
 
-## Step 5: Test Your Tool (10 min)
 
-Go to **Kibana** and open the **AI Assistant** (or **AI Agent**,
-depending on your build), choose the **Kafeju** agent, and ask:
+## Step 5: Test Your Tool
+===
+Go to **Kibana > AI Agent**, switch to the **Kafeju** agent, and
+ask:
 
 ```
 Find zombie VMs — which expensive instances are sitting idle and wasting money?
 ```
 
-Expand the **reasoning** / tool-call panel under the answer and
+Expand the **reasoning panel** under the answer and
 confirm that `participant.find_zombie_vms` was the tool that ran.
 
 ![Screenshot 2026-04-23 at 16.24.03.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/ac9710c9f35d6b600df42240a59941fd/assets/Screenshot%202026-04-23%20at%2016.24.03.png)
-
 The agent should return a structured table of teams, VM types, CPU
 usage, and dollar waste.
-
 ![Screenshot 2026-04-23 at 16.24.48.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/00d68a0e00a75325f347e6058ea146cc/assets/Screenshot%202026-04-23%20at%2016.24.48.png)
 **The key comparison:** Remember in Challenge 1 when you asked this
 same type of question and the agent couldn't answer? Now it produces
@@ -147,7 +146,7 @@ real data. **You built that capability in 10 minutes, without writing
 a line of code outside ES|QL.**
 
 ## Check Your Work
-
+===
 The automated check verifies that:
 
 1. A tool with ID containing `participant` exists.
@@ -157,7 +156,7 @@ Before clicking **Next**, confirm in the UI:
 
 - The **Tools** tab shows `participant.find_zombie_vms`.
 - The **Agents** tab > **Kafeju** page lists that tool under its
-  attached tools.
+attached tools.
 - Kafeju actually invoked `participant.find_zombie_vms` when you
-  asked the zombie question in Step 5.
+asked the zombie question in Step 5.
 

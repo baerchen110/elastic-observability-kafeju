@@ -6,7 +6,7 @@ that the Kafeju agent currently cannot answer.
 ---
 
 ## Challenge Card A: Regional Cost Comparison (Difficulty: 1 star)
-
+===
 **Business question:** "Which GCP region is cheapest for running VMs?"
 
 **Data view:** **GCP Pricing Catalog** (ES|QL index pattern:
@@ -54,7 +54,7 @@ data doesn't support a multi-region ranking.
 ---
 
 ## Challenge Card B: Weekly Cost Trends (Difficulty: 2 stars)
-
+===
 **Business question:** "Show me weekly cost trends per team."
 
 **Data view:** **GCP Billing** (ES|QL index pattern: `gcp-billing-*`)
@@ -95,7 +95,7 @@ FROM gcp-billing-*
 ---
 
 ## Challenge Card C: Growth Predictions (Difficulty: 2 stars)
-
+===
 **Business question:** "Which teams will need more capacity soonest?"
 
 **Data view:** **ML Growth Predictions** (ES|QL index pattern:
@@ -167,7 +167,7 @@ Notes:
 ---
 
 ## Challenge Card D: Team Overspend Analysis (Difficulty: 3 stars)
-
+===
 **Business question:** "How much is each team overspending vs actual
 usage?"
 
@@ -219,7 +219,7 @@ headline number the agent will narrate back.
 
 ---
 
-## Register and Wire Your Tool
+## Register and Wire Your Tool (UI)
 
 Once your query works in Discover, follow the same UI flow you used in
 Challenge 3 — no terminal needed.
@@ -244,9 +244,12 @@ tool that ran.
 > logic — make it explicit.
 
 ## Check Your Work
+===
+The automated check verifies that at least **two** participant tools
+exist (the zombie detector from Challenge 3 + your new tool) and that
+both are attached to the Kafeju agent.
 
-
-Before clicking **Next**, confirm in the UI:
+Before clicking **Check**, confirm in the UI:
 - The **Tools** tab shows your new `participant.*` tool.
 - The **Agents** tab > **Kafeju** page lists it alongside the
   zombie detector.
