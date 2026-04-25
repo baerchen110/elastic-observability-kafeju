@@ -55,7 +55,7 @@ Before asking an AI anything, *you* should know what data exists.
 | `drift_metrics.combined_drift_score` | % of allocated resources that are *not* being used |
 | `cost_actual.total_cost_usd` | Cost of that execution |
 
-![Screenshot 2026-04-23 at 10.34.53.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/1511c65789408ef0e013c304727b91e0/assets/Screenshot%202026-04-23%20at%2010.34.53.png)
+![Screenshot 2026-04-25 at 16.53.22.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/c47dd253d7b9ce8d85a8ca00d45424fe/assets/Screenshot%202026-04-25%20at%2016.53.22.png)
 
 4. Now switch the data view to **GCP Pricing Catalog** and expand
    a document. Note how each machine type has an hourly price per
@@ -85,7 +85,7 @@ sure the time picker is still on **Last 1 year**.)
 Panels show:
 - Average drift % across the fleet
 - Drift broken down by **team**, **machine type**, and **zone**
-![Screenshot 2026-04-23 at 10.36.01.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/728ab96446f8d0a39ddbcb06bce65114/assets/Screenshot%202026-04-23%20at%2010.36.01.png)
+![Screenshot 2026-04-25 at 16.54.13.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/72bfa35cc17d317e6419ec4f54ad0849/assets/Screenshot%202026-04-25%20at%2016.54.13.png)
 
 > **What to notice:** Drift is *not* evenly distributed. A few teams
 > and a few machine types dominate the waste. These are the exact VMs
@@ -97,7 +97,7 @@ Panels show:
 - Total compute cost and cost by team
 - Billing trend over time
 - Estimated savings from rightsizing over-provisioned VMs
-![Screenshot 2026-04-23 at 10.36.15.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/9dfcaa7377db8584ff73253b62c0f08d/assets/Screenshot%202026-04-23%20at%2010.36.15.png)
+![Screenshot 2026-04-25 at 16.54.01.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/d0ae1823be47e4db6954709f29bb03ef/assets/Screenshot%202026-04-25%20at%2016.54.01.png)
 > **What to notice:** The gap between *current spend* and *rightsized
 > spend* is the prize money. Later in the workshop you will build a
 > tool that surfaces that number on demand.
@@ -108,7 +108,7 @@ Panels show:
 - ML anomaly score timeline, by team
 - Growth/capacity forecasts
 
-![Screenshot 2026-04-23 at 10.36.32.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/69757658cacdc43bee6f46a5c06f8073/assets/Screenshot%202026-04-23%20at%2010.36.32.png)
+![Screenshot 2026-04-25 at 16.53.43.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/2bcc2611aa64c7f9b113923fa4ebbc1f/assets/Screenshot%202026-04-25%20at%2016.53.43.png)
 > **What to notice:** The ML jobs have already scored every VM. The
 > agent doesn't need to run ML — it just needs a **tool** to query
 > these predictions. That's what you will build in Challenge 2 and 3.
