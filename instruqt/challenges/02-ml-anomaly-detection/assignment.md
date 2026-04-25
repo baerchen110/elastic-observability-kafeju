@@ -1,11 +1,11 @@
-# Challenge 2: Explore ML Anomalies and Dissect a Tool
+# Challenge 2: Explore ML anomalies and dissect a tool
 
 Four ML anomaly-detection jobs have already been run on the GCP data.
 You will start by looking at those jobs and their results in the Kibana
 ML UI, then follow the same results all the way to a Kafeju answer.
 
 
-## Step 1: Meet the ML Jobs
+## Step 1: Meet the ML jobs
 ===
 
 
@@ -48,7 +48,7 @@ You'll see `.ml-anomalies-*` in action in the next steps.
 
 ---
 
-## Step 2: Explore Detected Anomalies in the UI (~10 min)
+## Step 2: Explore detected anomalies in the UI (~10 min)
 ===
 ### 2a. Anomaly Explorer
 
@@ -134,7 +134,7 @@ one raw document.
 
 ---
 
-## Step 3: Dissect the ML Tool in the Agent Builder UI
+## Step 3: Dissect the ML tool in the Agent Builder UI
 ===
 Now let's see how Kafeju consumes those predictions.
 
@@ -219,7 +219,7 @@ the `workload-growth-rate` job's output). Two tools, same recipe.
 
 ---
 
-## Step 4: Run the Tool Two Ways
+## Step 4: Run the tool two ways
 ===
 You've already read the tool's ES|QL. Now run the tool and see what
 it actually returns — first on its own (via Agent Builder's Test
@@ -285,7 +285,7 @@ Is anything unusual happening on our VMs lately?
 
 ---
 
-## Step 5: Spot the Gaps — Don't Trust, verify
+## Step 5: Spot the gaps — don't trust, verify
 ===
 Modern LLMs rarely say *"I can't answer that."* They pick the
 closest-looking tool, run it, and re-narrate the result as if it
@@ -425,7 +425,7 @@ Challenge 3 (a real zombie-VM tool) and design in Challenge 4.
 
 ---
 
-## Check Your Work
+## Check your work
 ===
 Before clicking **Next**, confirm:
 

@@ -1,4 +1,4 @@
-# Challenge 1: From Consumer to Creator
+# Challenge 1: From consumer to creator
 
 ## About this challenge
 
@@ -36,7 +36,7 @@ Kafeju agent and identify where its current tools fall short.
 
 ---
 
-## Step 1: Explore the Data in Discover
+## Step 1: Explore the data in Discover
 ===
 
 Before asking an AI anything, *you* should know what data exists.
@@ -72,7 +72,7 @@ Before asking an AI anything, *you* should know what data exists.
 
 ---
 
-## Step 2: Tour the Pre-Built Dashboards
+## Step 2: Tour the pre-built dashboards
 ===
 
 
@@ -115,7 +115,7 @@ Panels show:
 
 ---
 
-## Step 3: Meet Kafeju — Ask What It *Can* Do
+## Step 3: Meet Kafeju — ask what it *can* do
 ===
 
 
@@ -160,7 +160,7 @@ tool ID in the reasoning panel.
 
 ---
 
-## Step 4: Find the Gap
+## Step 4: Find the gap
 ===
 
 
@@ -240,7 +240,7 @@ check the tool's ES|QL against your actual intent.
 
 ---
 
-## Step 5: Inspect Kafeju's Tools in the Agent Builder UI
+## Step 5: Inspect Kafeju's tools in the Agent Builder UI
 ===
 
 
@@ -273,7 +273,7 @@ needed.
 
 ---
 
-## Check Your Work
+## Check your work
 ===
 
 

@@ -1,6 +1,6 @@
-# Challenge 5: Getting Further — Multi-Tool Chaining
+# Challenge 5: Getting further - multi-tool chaining
 
-## The Compound Question
+## The compound question
 ===
 Open the **AI Agent** > **Kafeju** and ask:
 
@@ -65,7 +65,7 @@ tools compose with Kafeju's built-in tools.
 the existing built-ins, the agent can now answer FinOps questions that would
 take a human analyst hours to research manually.
 
-## Experiment: More Compound Questions
+## Experiment: more compound questions
 ===
 Try these compound questions that exercise multiple tools:
 
@@ -85,7 +85,7 @@ Notice how the agent weaves together data from different tools to
 build a narrative answer. Each tool returns a data table; the AI
 interprets and connects them.
 
-## Reflect: Before vs After
+## Reflect: before vs after
 ===
 Think back to Challenge 1:
 - **Before:** You asked about zombie VMs and cheapest regions. The
@@ -96,7 +96,7 @@ Think back to Challenge 1:
 **What changed?** Not the data. Not the agent's instructions. Not
 the AI model. Just **two tools** — ~10 lines of ES|QL each.
 
-## Key Takeaways
+## Key takeaways
 ===
 Write down your top 3 takeaways. Here are prompts:
 
@@ -104,7 +104,7 @@ Write down your top 3 takeaways. Here are prompts:
 2. How important is the tool *description* vs the query itself?
 3. What tool would you build first for your own data at work?
 
-## Bonus: Improve a Tool Description (UI)
+## Bonus: improve a tool description (UI)
 ===
 A common issue: the AI doesn't invoke your tool when you expect it
 to. This is almost always a **description problem** — Kafeju picks
@@ -154,7 +154,7 @@ tools by matching the user's intent against each tool's description.
 > worth nothing. Good descriptions answer: *"When should the AI
 > pick this tool instead of another one?"*
 
-## Summary: What You Built Today
+## Summary: what you built today
 ===
 - Explored GCP resource data in Elasticsearch
 - Dissected an existing Agent Builder tool
@@ -167,7 +167,7 @@ tools by matching the user's intent against each tool's description.
 **The difference between "using an agent" and "building an agent" is
 a short UI form and ~10 lines of ES|QL.**
 
-## Check Your Work
+## Check your work
 ===
 This challenge is complete when you have successfully asked at least
 one compound question and received a multi-tool answer.

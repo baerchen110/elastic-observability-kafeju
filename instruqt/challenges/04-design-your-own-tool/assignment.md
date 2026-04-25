@@ -1,11 +1,11 @@
-# Challenge 4: Design Your Own Tool
+# Challenge 4: Design your own tool
 
 Pick one of the challenge cards below. Each represents a real question
 that the Kafeju agent currently cannot answer.
 
 ---
 
-## Challenge Card A: Regional Cost Comparison (Difficulty: 1 star)
+## Challenge card A: Regional cost comparison (difficulty: 1 star)
 ===
 **Business question:** "Which GCP region is cheapest for running VMs?"
 
@@ -32,7 +32,7 @@ FROM gcp-pricing-catalog
 **Test prompt:** "Which GCP region is cheapest for running VMs?"
 
 <details>
-<summary><strong>Example ES|QL solution</strong> (click to reveal — instructor hint)</summary>
+<summary><strong>Example ES|QL solution</strong> (click to reveal - instructor hint)</summary>
 
 ```sql
 FROM gcp-pricing-catalog
@@ -53,7 +53,7 @@ data doesn't support a multi-region ranking.
 
 ---
 
-## Challenge Card B: Weekly Cost Trends (Difficulty: 2 stars)
+## Challenge card B: Weekly cost trends (difficulty: 2 stars)
 ===
 **Business question:** "Show me weekly cost trends per team."
 
@@ -79,7 +79,7 @@ FROM gcp-billing-*
 **Test prompt:** "Show me weekly cost trends per team."
 
 <details>
-<summary><strong>Example ES|QL solution</strong> (click to reveal — instructor hint)</summary>
+<summary><strong>Example ES|QL solution</strong> (click to reveal - instructor hint)</summary>
 
 ```sql
 FROM gcp-billing-*
@@ -94,7 +94,7 @@ FROM gcp-billing-*
 
 ---
 
-## Challenge Card C: Growth Predictions (Difficulty: 2 stars)
+## Challenge card C: Growth predictions (difficulty: 2 stars)
 ===
 **Business question:** "Which teams will need more capacity soonest?"
 
@@ -131,7 +131,7 @@ FROM ml-predictions-growth-*
 **Test prompt:** "Which teams will need more capacity soonest?"
 
 <details>
-<summary><strong>Example ES|QL solution</strong> (click to reveal — instructor hint)</summary>
+<summary><strong>Example ES|QL solution</strong> (click to reveal - instructor hint)</summary>
 
 ```esql
 FROM ml-predictions-growth-*
@@ -166,7 +166,7 @@ Notes:
 
 ---
 
-## Challenge Card D: Team Overspend Analysis (Difficulty: 3 stars)
+## Challenge card D: Team overspend analysis (difficulty: 3 stars)
 ===
 **Business question:** "How much is each team overspending vs actual
 usage?"
@@ -197,7 +197,7 @@ FROM gcp-resource-executions-*
 usage?"
 
 <details>
-<summary><strong>Example ES|QL solution</strong> (click to reveal — instructor hint)</summary>
+<summary><strong>Example ES|QL solution</strong> (click to reveal - instructor hint)</summary>
 
 ```sql
 FROM gcp-resource-executions-*
@@ -219,7 +219,7 @@ headline number the agent will narrate back.
 
 ---
 
-## Register and Wire Your Tool (UI)
+## Register and wire your tool (UI)
 
 Once your query works in Discover, follow the same UI flow you used in
 Challenge 3 — no terminal needed.
@@ -230,7 +230,7 @@ Challenge 3 — no terminal needed.
 ### Wire it into the Kafeju agent (As you did in the previous challenge)
 
 
-## Test Your Tool
+## Test your tool
 
 Go to **Kibana > AI Agent > Kafeju** and ask the **test prompt**
 from your card. Expand the **reasoning panel** under
@@ -243,7 +243,7 @@ tool that ran.
 > region, or region cost comparison"*). Description text is routing
 > logic — make it explicit.
 
-## Check Your Work
+## Check your work
 ===
 The automated check verifies that at least **two** participant tools
 exist (the zombie detector from Challenge 3 + your new tool) and that

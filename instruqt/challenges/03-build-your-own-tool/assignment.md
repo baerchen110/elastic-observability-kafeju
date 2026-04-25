@@ -1,4 +1,4 @@
-# Challenge 3: Build Your First Tool — Zombie VM Detector
+# Challenge 3: Build your first tool, zombie VM detector
 
 A "zombie VM" is a virtual machine running at near-zero CPU
 utilization on an expensive machine type — it costs money but does
@@ -8,7 +8,7 @@ Agent Builder UI, wire it into the Kafeju agent, and test it with
 a natural-language prompt. Everything happens in Kibana — no
 terminal or API calls required.
 
-## Step 1: Design the Query
+## Step 1: Design the query
 ===
 Think about what you need:
 
@@ -31,7 +31,7 @@ Think about what you need:
 > - In this specific query, `STATS ... BY` already narrows output to a
 >   compact schema, and `LIMIT 15` caps row volume.
 
-## Step 2: Test the Query in Discover
+## Step 2: Test the query in Discover
 ===
 Open **Kibana > Discover > ES|QL mode** and run:
 
@@ -61,7 +61,7 @@ year**) and verify the field names by expanding a document in Discover.
 
 Keep this query handy — you'll paste it into the tool in the next step.
 
-## Step 3: Register the Tool in the Agent Builder UI
+## Step 3: Register the tool in the Agent Builder UI
 ===
 1. In the app search bar, type **Agent tools** and select **Agents / Tools**
 ![Screenshot 2026-04-23 at 15.19.34.png](https://play.instruqt.com/assets/tracks/nyxu84eztwnd/55f58451546db5499b9c307574cab2d3/assets/Screenshot%202026-04-23%20at%2015.19.34.png)
@@ -99,7 +99,7 @@ Keep this query handy — you'll paste it into the tool in the next step.
 > you dissected in Challenge 2 — **ID**, **description**, **ES|QL
 > query**.
 
-## Step 4: Wire the Tool Into the Kafeju Agent
+## Step 4: Wire the tool into the Kafeju agent
 ===
 The tool exists, but the Kafeju agent doesn't know about it yet. In
 Agent Builder you attach tools to agents explicitly.
@@ -124,7 +124,7 @@ Agent Builder you attach tools to agents explicitly.
 > `kafeju.*` tools, it should now show 16.
 
 
-## Step 5: Test Your Tool
+## Step 5: Test your tool
 ===
 Go to **Kibana > AI Agent**, switch to the **Kafeju** agent, and
 ask:
@@ -145,7 +145,7 @@ same type of question and the agent couldn't answer? Now it produces
 real data. **You built that capability in 10 minutes, without writing
 a line of code outside ES|QL.**
 
-## Check Your Work
+## Check your work
 ===
 The automated check verifies that:
 
